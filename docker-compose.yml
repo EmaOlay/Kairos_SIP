@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  kairos:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: kairos-engine
+    
+    # Volúmenes
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./scripts:/app/scripts
+    
+    # Puertos (si luego tenemos API)
+    ports:
+      - "8000:8000"
+    
+    # Variables de entorno
+    environment:
+      - KAIROS_ENV=development
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    
+    # Políticas de reinicio
+    restart: unless-stopped
+    
+    # Recurcos
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Network
+    networks:
+      - kairos-network
+
+networks:
+  kairos-network:
+    driver: bridge
+
+volumes:
+  kairos-data:
+    driver: local
