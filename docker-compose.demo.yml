@@ -1,0 +1,17 @@
+services:
+  # Demo Script (Consola)
+  kairos-demo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: kairos-demo
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./scripts:/app/scripts
+    environment:
+      - KAIROS_ENV=demo
+      - PYTHONPATH=/app/src
+    # Corre el script de validacion con datos reales de UADE
+    command: ["python", "scripts/validar_motor_real.py"]

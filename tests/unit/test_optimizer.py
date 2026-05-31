@@ -416,3 +416,31 @@ class TestReportesYAnalisis:
         # El optimizer deberia chillar o al menos detectar que hay un ciclo
         optimizer = KairosOptimizer(plan_con_ciclo)
         assert optimizer.tiene_ciclos() is True
+        assert "El plan tiene ciclos" in optimizer.validar_caminos()[0]
+
+    def test_correlativas_posteriores_automaticas(self, plan_estudio_minimo):
+        """
+        Verificamos que si A es prereq de B, entonces B sea posterior de A.
+        El motor lo tiene que hacer solo, no nos vamos a poner a mano.
+        """
+        optimizer = KairosOptimizer(plan_estudio_minimo)
+        
+        # 3.4.069 es prereq de 3.4.070
+        m_base = optimizer.plan.materias["3.4.069"]
+        assert "3.4.070" in m_base.correlativas_posteriores
+
+    def test_validar_caminos_inconsistencia_temporal(self):
+        """
+        Si una materia de 5to es prereq de una de 1ro, alguien metio mal el dedo.
+        """
+        m1 = Materia(codigo="M1", nombre="M1", ano=1, cuatrimestre=1, correlativas_anteriores=["M5"])
+        m5 = Materia(codigo="M5", nombre="M5", ano=5, cuatrimestre=1)
+        
+        plan_loco = PlanEstudio(
+            codigo_plan="LOCO", nombre_carrera="Test", ano_vigencia=2021, duracion_anos=5,
+            materias={"M1": m1, "M5": m5}
+        )
+        
+        optimizer = KairosOptimizer(plan_loco)
+        problemas = optimizer.validar_caminos()
+        assert any("Inconsistencia temporal" in p for p in problemas)

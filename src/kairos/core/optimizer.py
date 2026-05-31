@@ -64,22 +64,59 @@ class KairosOptimizer:
         Construye el grafo dirigido de correlatividades.
         
         Nodos: codigos de materias
-        Aristas: X  Y significa que X es prerequisito de Y (debe aprobarse antes)
+        Aristas: X -> Y significa que X es prerequisito de Y (debe aprobarse antes)
+        
+        Tambien aprovechamos y llenamos las correlativas_posteriores en el plan,
+        asi queda todo bien espejado.
         """
         logger.info("Inicializando grafo de correlatividades...")
 
         for codigo, materia in self.plan.materias.items():
             self.grafo_correlativas.add_node(codigo, materia=materia)
+            # Limpiamos por las dudas si venia con algo
+            materia.correlativas_posteriores = []
 
         for codigo, materia in self.plan.materias.items():
             for prerequisito in materia.correlativas_anteriores:
                 if prerequisito in self.plan.materias:
                     self.grafo_correlativas.add_edge(prerequisito, codigo)
+                    # Llenamos el sentido inverso (posteriores)
+                    if codigo not in self.plan.materias[prerequisito].correlativas_posteriores:
+                        self.plan.materias[prerequisito].correlativas_posteriores.append(codigo)
 
         logger.info(
             f" Grafo construido: {len(self.grafo_correlativas.nodes)} nodos, "
             f"{len(self.grafo_correlativas.edges)} aristas"
         )
+
+    def validar_caminos(self) -> List[str]:
+        """
+        Se fija si hay materias que son imposibles de alcanzar o raras.
+        Aca saltan los problemas de logica del plan.
+        """
+        problemas = []
+        
+        # 1. Detectar ciclos (si hay un ciclo, no se reciben mas)
+        if self.tiene_ciclos():
+            problemas.append("El plan tiene ciclos (correlatividades circulares)")
+
+        # 2. Detectar nodos aislados (materias que no tienen nada que ver con nada)
+        # Ojo: esto puede ser normal en algunas carreras, pero avisamos.
+        aislados = list(nx.isolates(self.grafo_correlativas))
+        if aislados:
+            logger.info(f"Materias sin ninguna correlativa (entrada ni salida): {aislados}")
+
+        # 3. Validar consistencia de anos (una materia de 4to no puede ser prereq de una de 1ro)
+        for u, v in self.grafo_correlativas.edges():
+            m_u = self.plan.materias[u]
+            m_v = self.plan.materias[v]
+            if m_u.ano > m_v.ano:
+                problemas.append(
+                    f"Inconsistencia temporal: {u} (ano {m_u.ano}) es prereq de "
+                    f"{v} (ano {m_v.ano})"
+                )
+        
+        return problemas
 
     def agregar_estudiante(self, estudiante: EstudianteTrayectoria) -> None:
         """Agrega un estudiante al motor para analisis"""

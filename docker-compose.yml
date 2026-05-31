@@ -1,45 +1,37 @@
 services:
-  kairos:
+  # Backend API
+  kairos-api:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: kairos-engine
-    
-    # Volumenes
+    container_name: kairos-api
+    ports:
+      - "8000:8000"
     volumes:
       - ./src:/app/src
       - ./data:/app/data
       - ./config:/app/config
       - ./scripts:/app/scripts
-    
-    # Puertos (si luego tenemos API)
-    ports:
-      - "8000:8000"
-    
-    # Variables de entorno
     environment:
       - KAIROS_ENV=development
-      - LOG_LEVEL=INFO
-      - PYTHONUNBUFFERED=1
-    
-    # Recurcos
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 1G
-    
-    # Network
+      - PYTHONPATH=/app/src
+    command: ["python", "scripts/run_api.py"]
+    networks:
+      - kairos-network
+
+  # Frontend Dashboard
+  kairos-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kairos-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - kairos-api
     networks:
       - kairos-network
 
 networks:
   kairos-network:
     driver: bridge
-
-volumes:
-  kairos-data:
-    driver: local

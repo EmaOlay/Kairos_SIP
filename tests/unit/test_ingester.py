@@ -202,9 +202,11 @@ class TestDataIngester:
         Vemos si el reporte de errores tira algo coherente cuando hubo pifias.
         """
         ingester.errores_validacion = [
-            {"tipo": "EstudianteTrayectoria", "fila": 0, "error": "Algo se rompio", "data": {}}
+            {"tipo": "EstudianteTrayectoria", "fila": 0, "error": "Algo se rompio", "data": {"id": "123"}}
         ]
         
         reporte = ingester.generar_reporte_errores()
         assert "REPORTE DE ERRORES DE VALIDACION" in reporte
-        assert "EstudianteTrayectoria: 1 errores" in reporte
+        assert "TIPO: EstudianteTrayectoria (1 errores)" in reporte
+        assert "Algo se rompio (ocurrio 1 veces)" in reporte
+        assert "{'id': '123'}" in reporte

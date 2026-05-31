@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import logging
+from collections import defaultdict
 
 import pandas as pd
 from pydantic import ValidationError
@@ -344,26 +345,44 @@ class DataIngester:
         return (len(problemas) == 0, problemas)
 
     def generar_reporte_errores(self) -> str:
-        """Genera reporte de errores de validacion"""
+        """
+        Genera un reporte detallado de los errores de validacion.
+        Si hubo pifias en los datos, aca te enteras de todo el bardo.
+        """
         if not self.errores_validacion:
-            return " Sin errores de validacion"
+            return "¡Joyita! No se encontraron errores de validacion."
 
-        reporte = [f"\n{'='*70}", "REPORTE DE ERRORES DE VALIDACION"]
-        reporte.append(f"{'='*70}\n")
+        reporte = [
+            f"\n{'='*70}",
+            "REPORTE DE ERRORES DE VALIDACION - KAIROS",
+            f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"{'='*70}\n"
+        ]
 
-        por_tipo = {}
+        por_tipo = defaultdict(list)
         for err in self.errores_validacion:
-            tipo = err["tipo"]
-            if tipo not in por_tipo:
-                por_tipo[tipo] = []
-            por_tipo[tipo].append(err)
+            por_tipo[err["tipo"]].append(err)
 
         for tipo, errores in por_tipo.items():
-            reporte.append(f"\n{tipo}: {len(errores)} errores")
-            for err in errores[:5]:  # Mostrar primeros 5
-                reporte.append(f"  - {err.get('error', 'Error desconocido')}")
-            if len(errores) > 5:
-                reporte.append(f"  ... y {len(errores) - 5} mas")
+            reporte.append(f"\n>>> TIPO: {tipo} ({len(errores)} errores)")
+            
+            # Agrupar errores por mensaje para no repetir como loros
+            conteo_mensajes = defaultdict(int)
+            ejemplos = {}
+            
+            for e in errores:
+                msg = str(e.get("error", "Error desconocido")).split("\n")[0] # Solo la primera linea
+                conteo_mensajes[msg] += 1
+                if msg not in ejemplos:
+                    ejemplos[msg] = e.get("data", {})
 
-        reporte.append(f"\n{'='*70}\n")
+            for msg, cant in conteo_mensajes.items():
+                reporte.append(f"  - {msg} (ocurrio {cant} veces)")
+                if msg in ejemplos:
+                    reporte.append(f"    Ejemplo de data: {ejemplos[msg]}")
+
+        reporte.append(f"\n{'='*70}")
+        reporte.append("Ojo con estos datos que quedaron afuera del analisis.")
+        reporte.append(f"{'='*70}\n")
+        
         return "\n".join(reporte)
