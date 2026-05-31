@@ -1,4 +1,4 @@
-"""Módulo core: motor de optimización y grafo de correlatividades"""
+"""Modulo core: motor de optimizacion y grafo de correlatividades"""
 
 from .optimizer import KairosOptimizer
 

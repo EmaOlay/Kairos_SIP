@@ -1,4 +1,4 @@
-"""Módulo de esquemas: estructuras de datos genéricas para Kairós"""
+"""Modulo de esquemas: estructuras de datos genericas para Kairos"""
 
 from .data_models import EstudianteTrayectoria, PlanEstudio, RecursoDisponible
 

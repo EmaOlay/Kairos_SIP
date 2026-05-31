@@ -14,7 +14,7 @@ class Materia:
     """Representa una materia en el plan de estudios"""
     codigo: str
     nombre: str
-    año: int
+    ano: int
     cuatrimestre: int
     correlativas_anteriores: List[str] = None
     correlativas_posteriores: List[str] = None
@@ -39,16 +39,16 @@ class CorrelativasParser:
         with open(self.html_path, "r", encoding="utf-8") as f:
             html = f.read()
 
-        # Extraer título de carrera
+        # Extraer titulo de carrera
         carrera_match = re.search(
             r'<span id="[^"]*_lbl_TituloCarrera"[^>]*>([^<]+)</span>',
             html
         )
         if carrera_match:
             self.carrera = carrera_match.group(1).strip()
-            print(f"✓ Carrera: {self.carrera}")
+            print(f" Carrera: {self.carrera}")
 
-        # Extraer todas las materias con sus códigos y nombres
+        # Extraer todas las materias con sus codigos y nombres
         self._extract_materias(html)
 
         # Extraer correlativas
@@ -57,23 +57,23 @@ class CorrelativasParser:
         return self.materias
 
     def _extract_materias(self, html: str) -> None:
-        """Extrae código, nombre, año y cuatrimestre de cada materia"""
+        """Extrae codigo, nombre, ano y cuatrimestre de cada materia"""
 
-        # Buscar años (1° Año, 2° Año, etc)
-        año_pattern = r'<span>(\d+)° Año</span>'
-        cuatrimestre_pattern = r'<span>(\d+)° Cuatrimestre</span>'
+        # Buscar anos (1 Ano, 2 Ano, etc)
+        ano_pattern = r'<span>(\d+) Ano</span>'
+        cuatrimestre_pattern = r'<span>(\d+) Cuatrimestre</span>'
 
-        # División por años
-        años_bloques = re.split(r'<span>\d+° Año</span>', html)
+        # Division por anos
+        anos_bloques = re.split(r'<span>\d+ Ano</span>', html)
 
-        año_num = 0
-        for año_bloque in años_bloques[1:]:  # Skip primer elemento (antes del primer año)
-            año_num += 1
+        ano_num = 0
+        for ano_bloque in anos_bloques[1:]:  # Skip primer elemento (antes del primer ano)
+            ano_num += 1
 
-            # División por cuatrimestres
+            # Division por cuatrimestres
             cuatri_bloques = re.split(
-                r'<span>\d+° Cuatrimestre</span>',
-                año_bloque
+                r'<span>\d+ Cuatrimestre</span>',
+                ano_bloque
             )
 
             cuatri_num = 0
@@ -82,7 +82,7 @@ class CorrelativasParser:
                 cuatri_num += 1
 
                 # Buscar materias en este cuatrimestre
-                # Patrón: <span>CODIGO</span> ... <span>NOMBRE</span>
+                # Patron: <span>CODIGO</span> ... <span>NOMBRE</span>
                 materia_pattern = r'<td class="materias2"[^>]*>\s*<span>([^<]+)</span>\s*</td>\s*<td class="materias">\s*<span>([^<]+)</span>\s*</td>'
 
                 for match in re.finditer(materia_pattern, cuatri_bloque):
@@ -92,7 +92,7 @@ class CorrelativasParser:
                     self.materias[codigo] = Materia(
                         codigo=codigo,
                         nombre=nombre,
-                        año=año_num,
+                        ano=ano_num,
                         cuatrimestre=cuatri_num
                     )
 
@@ -101,11 +101,11 @@ class CorrelativasParser:
 
         # Para cada materia, buscar sus correlativas
         for codigo in list(self.materias.keys()):
-            # Escapar el código para usarlo en regex
+            # Escapar el codigo para usarlo en regex
             codigo_escaped = re.escape(codigo)
 
             # Buscar la tabla de correlativas para esta materia
-            # El patrón ID puede ser: _2{codigo} o _2{codigo}1 (para materias con el mismo nombre)
+            # El patron ID puede ser: _2{codigo} o _2{codigo}1 (para materias con el mismo nombre)
             table_pattern = (
                 rf'id="ctl00_ContentPlaceHolderMain_2{codigo_escaped}[^"]*"[^>]*>.*?</table>'
             )
@@ -120,7 +120,7 @@ class CorrelativasParser:
                 if anterior_match:
                     anterior_text = anterior_match.group(1).strip()
                     if anterior_text != "No posee":
-                        # Parsear códigos de materias (formato: "3.4.001, 3.4.002")
+                        # Parsear codigos de materias (formato: "3.4.001, 3.4.002")
                         codigos = [c.strip() for c in anterior_text.split(",") if c.strip()]
                         self.materias[codigo].correlativas_anteriores = codigos
 
@@ -130,7 +130,7 @@ class CorrelativasParser:
                 if posterior_match:
                     posterior_text = posterior_match.group(1).strip()
                     if posterior_text != "No posee":
-                        # Parsear códigos de materias
+                        # Parsear codigos de materias
                         codigos = [c.strip() for c in posterior_text.split(",") if c.strip()]
                         self.materias[codigo].correlativas_posteriores = codigos
 
@@ -139,19 +139,19 @@ class CorrelativasParser:
         estructura = {
             "carrera": self.carrera,
             "plan": "1621",
-            "año_vigencia": "2021",
+            "ano_vigencia": "2021",
             "materias": [
                 {
                     "codigo": m.codigo,
                     "nombre": m.nombre,
-                    "año": m.año,
+                    "ano": m.ano,
                     "cuatrimestre": m.cuatrimestre,
                     "correlativas_anteriores": m.correlativas_anteriores,
                     "correlativas_posteriores": m.correlativas_posteriores,
                 }
                 for m in sorted(
                     self.materias.values(),
-                    key=lambda x: (x.año, x.cuatrimestre, x.codigo)
+                    key=lambda x: (x.ano, x.cuatrimestre, x.codigo)
                 )
             ]
         }
@@ -162,30 +162,30 @@ class CorrelativasParser:
         resumen = [
             f"\n{'='*70}",
             f"CARRERA: {self.carrera}",
-            f"PLAN: 1621 - AÑO VIGENCIA: 2021",
+            f"PLAN: 1621 - ANO VIGENCIA: 2021",
             f"{'='*70}\n",
         ]
 
-        año_actual = 0
+        ano_actual = 0
         cuatri_actual = 0
 
         for materia in sorted(
             self.materias.values(),
-            key=lambda x: (x.año, x.cuatrimestre, x.codigo)
+            key=lambda x: (x.ano, x.cuatrimestre, x.codigo)
         ):
-            if materia.año != año_actual:
-                año_actual = materia.año
+            if materia.ano != ano_actual:
+                ano_actual = materia.ano
                 cuatri_actual = 0
-                resumen.append(f"\n{'─'*70}")
-                resumen.append(f"{'█' * 3} AÑO {año_actual} {'█' * 3}")
-                resumen.append(f"{'─'*70}")
+                resumen.append(f"\n{''*70}")
+                resumen.append(f"{'' * 3} ANO {ano_actual} {'' * 3}")
+                resumen.append(f"{''*70}")
 
             if materia.cuatrimestre != cuatri_actual:
                 cuatri_actual = materia.cuatrimestre
-                resumen.append(f"\n   └─ CUATRIMESTRE {cuatri_actual}")
+                resumen.append(f"\n    CUATRIMESTRE {cuatri_actual}")
 
             resumen.append(
-                f"      • [{materia.codigo}] {materia.nombre}"
+                f"       [{materia.codigo}] {materia.nombre}"
             )
 
         resumen.append(f"\n{'='*70}")
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     parser = CorrelativasParser(html_file)
     materias = parser.parse()
 
-    print(f"\n✓ Se extrajeron {len(materias)} materias\n")
+    print(f"\n Se extrajeron {len(materias)} materias\n")
 
     # Generar resumen
     print(parser.generar_resumen())
@@ -211,4 +211,4 @@ if __name__ == "__main__":
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(parser.generar_estructura_json())
 
-    print(f"✓ Estructura guardada en: {output_path}\n")
+    print(f" Estructura guardada en: {output_path}\n")

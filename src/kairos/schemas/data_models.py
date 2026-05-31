@@ -1,8 +1,8 @@
 """
-Esquemas de datos genéricos para Kairós
+Esquemas de datos genericos para Kairos
 
 Define estructuras Pydantic para representar estudiantes, planes de estudio
-y recursos disponibles de forma agnóstica al sistema transaccional.
+y recursos disponibles de forma agnostica al sistema transaccional.
 """
 
 from typing import List, Optional, Dict, Set
@@ -17,7 +17,7 @@ class EstadoMateria(str, Enum):
     APROBADA = "aprobada"
     REGULAR = "regular"
     INSCRIPTA = "inscripta"
-    PENDIENTE = "pendiente"  # Aún no cursada
+    PENDIENTE = "pendiente"  # Aun no cursada
 
 
 class RegistroTrayectoria(BaseModel):
@@ -25,30 +25,30 @@ class RegistroTrayectoria(BaseModel):
     codigo_materia: str
     nombre_materia: str
     estado: EstadoMateria
-    año_academico: int
+    ano_academico: int
     cuatrimestre: int
-    calificacion: Optional[float] = None  # None si aún no fue evaluada
+    calificacion: Optional[float] = None  # None si aun no fue evaluada
     fecha_aprobacion: Optional[datetime] = None
 
     @validator("calificacion")
     def validar_calificacion(cls, v):
-        """Frená que la calificación esté entre 0 y 10"""
+        """Frena que la calificacion este entre 0 y 10"""
         if v is not None and not (0 <= v <= 10):
-            raise ValueError("Calificación debe estar entre 0 y 10")
+            raise ValueError("Calificacion debe estar entre 0 y 10")
         return v
 
 
 class EstudianteTrayectoria(BaseModel):
     """
-    Representa la trayectoria académica completa de un estudiante.
+    Representa la trayectoria academica completa de un estudiante.
     
-    Abstraemos los datos personales específicos; solo nos importa
-    el historial de cursadas y aprobaciones para el análisis prescriptivo.
+    Abstraemos los datos personales especificos; solo nos importa
+    el historial de cursadas y aprobaciones para el analisis prescriptivo.
     """
     estudiante_id: str
     codigo_carrera: str
     plan_estudio_id: str
-    año_ingreso: int
+    ano_ingreso: int
     registros_trayectoria: List[RegistroTrayectoria] = Field(
         default_factory=list,
         description="Historial de materias cursadas"
@@ -59,7 +59,7 @@ class EstudianteTrayectoria(BaseModel):
 
     @property
     def materias_aprobadas(self) -> Set[str]:
-        """Retorna el conjunto de códigos de materias aprobadas"""
+        """Retorna el conjunto de codigos de materias aprobadas"""
         return {
             r.codigo_materia
             for r in self.registros_trayectoria
@@ -91,7 +91,7 @@ class Materia(BaseModel):
     """Representa una asignatura en el plan de estudio"""
     codigo: str
     nombre: str
-    año: int  # Año del plan donde aparece (1-5)
+    ano: int  # Ano del plan donde aparece (1-5)
     cuatrimestre: int  # Cuatrimestre (1-2)
     horas_teoricas: Optional[int] = 0
     horas_practicas: Optional[int] = 0
@@ -99,11 +99,11 @@ class Materia(BaseModel):
     descripcion: Optional[str] = None
     correlativas_anteriores: List[str] = Field(
         default_factory=list,
-        description="Códigos de materias que deben estar aprobadas antes"
+        description="Codigos de materias que deben estar aprobadas antes"
     )
     correlativas_posteriores: List[str] = Field(
         default_factory=list,
-        description="Códigos de materias que requieren esta como prereq"
+        description="Codigos de materias que requieren esta como prereq"
     )
 
     @property
@@ -116,38 +116,38 @@ class PlanEstudio(BaseModel):
     """
     Representa el plan curricular completo de una carrera.
     
-    Define la estructura de años, cuatrimestres y materias, con sus
-    correlatividades. Agnóstico a la universidad específica.
+    Define la estructura de anos, cuatrimestres y materias, con sus
+    correlatividades. Agnostico a la universidad especifica.
     """
     codigo_plan: str
     nombre_carrera: str
     facultad: Optional[str] = None
-    año_vigencia: int
-    duracion_años: int
+    ano_vigencia: int
+    duracion_anos: int
     total_creditos: Optional[int] = None
     materias: Dict[str, Materia] = Field(
-        description="Diccionario de materias indexed por código"
+        description="Diccionario de materias indexed por codigo"
     )
 
     class Config:
         use_enum_values = True
 
     @property
-    def materias_por_año(self) -> Dict[int, List[Materia]]:
-        """Agrupa materias por año"""
+    def materias_por_ano(self) -> Dict[int, List[Materia]]:
+        """Agrupa materias por ano"""
         agrupadas: Dict[int, List[Materia]] = {}
         for materia in self.materias.values():
-            if materia.año not in agrupadas:
-                agrupadas[materia.año] = []
-            agrupadas[materia.año].append(materia)
+            if materia.ano not in agrupadas:
+                agrupadas[materia.ano] = []
+            agrupadas[materia.ano].append(materia)
         return {k: sorted(v, key=lambda m: m.cuatrimestre) for k, v in agrupadas.items()}
 
     @property
     def materias_por_cuatrimestre(self) -> Dict[tuple, List[Materia]]:
-        """Agrupa materias por (año, cuatrimestre)"""
+        """Agrupa materias por (ano, cuatrimestre)"""
         agrupadas: Dict[tuple, List[Materia]] = {}
         for materia in self.materias.values():
-            clave = (materia.año, materia.cuatrimestre)
+            clave = (materia.ano, materia.cuatrimestre)
             if clave not in agrupadas:
                 agrupadas[clave] = []
             agrupadas[clave].append(materia)
@@ -165,22 +165,22 @@ class PlanEstudio(BaseModel):
 
 class RecursoDisponible(BaseModel):
     """
-    Representa recursos académicos disponibles: comisiones, cupos, horarios.
+    Representa recursos academicos disponibles: comisiones, cupos, horarios.
     
-    Abstrae la capacidad operativa de la institución para dictar materias.
+    Abstrae la capacidad operativa de la institucion para dictar materias.
     """
     recurso_id: str
     codigo_materia: str
     nombre_materia: str
-    año_academico: int
+    ano_academico: int
     cuatrimestre: int
     
     # Capacidad
     cupos_totales: int
     cupos_ocupados: int = 0
     
-    # Configuración
-    modalidad: str = "presencial"  # presencial, virtual, híbrida
+    # Configuracion
+    modalidad: str = "presencial"  # presencial, virtual, hibrida
     horario_inicio: str  # HH:MM
     horario_fin: str    # HH:MM
     dias_semana: List[str] = Field(  # Lunes, Martes, etc
@@ -191,7 +191,7 @@ class RecursoDisponible(BaseModel):
     docente_id: Optional[str] = None
     docente_nombre: Optional[str] = None
     
-    # Costos operativos (para optimización)
+    # Costos operativos (para optimizacion)
     costo_operativo_base: Optional[float] = None  # Costo fijo
     costo_por_alumno: Optional[float] = None      # Costo variable
 
@@ -202,12 +202,12 @@ class RecursoDisponible(BaseModel):
 
     @property
     def tasa_ocupacion(self) -> float:
-        """Retorna tasa de ocupación (0-1)"""
+        """Retorna tasa de ocupacion (0-1)"""
         return self.cupos_ocupados / self.cupos_totales if self.cupos_totales > 0 else 0
 
     @property
     def costo_total(self) -> Optional[float]:
-        """Calcula costo total de operar esta comisión"""
+        """Calcula costo total de operar esta comision"""
         if self.costo_operativo_base is None:
             return None
         costo_var = (
@@ -217,25 +217,28 @@ class RecursoDisponible(BaseModel):
 
 
 class ConfiguracionKairos(BaseModel):
-    """Configuración global para el motor de optimización"""
-    min_tasa_ocupacion: float = 0.6  # Mínima ocupación para abrir comisión
+    """
+    Configuracion global para el motor de optimizacion.
+    
+    Los valores por defecto se cargan desde config/kairos_config.json.
+    """
+    min_tasa_ocupacion: float = 0.6
     max_cupos_por_comision: int = 50
-    weight_tasa_graduacion: float = 0.7  # Peso en optimización
+    weight_tasa_graduacion: float = 0.7
     weight_eficiencia_operativa: float = 0.3
-    años_estudio: int = 5
-    cuatrimestres_por_año: int = 2
+    anos_estudio: int = 5
+    cuatrimestres_por_ano: int = 2
 
-
-# Validaciones adicionales
-class ConfiguracionKairos(ConfiguracionKairos):
     @validator("min_tasa_ocupacion")
     def validar_tasa(cls, v):
+        """Verifica que tasa de ocupacion este en rango [0, 1]"""
         if not (0 <= v <= 1):
             raise ValueError("min_tasa_ocupacion debe estar entre 0 y 1")
         return v
 
-    @validator("weight_tasa_graduacion")
+    @validator("weight_tasa_graduacion", "weight_eficiencia_operativa")
     def validar_weights(cls, v):
+        """Verifica que los pesos sean probabilidades validas"""
         if not (0 <= v <= 1):
             raise ValueError("Pesos deben estar entre 0 y 1")
         return v

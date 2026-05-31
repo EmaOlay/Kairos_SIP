@@ -1,8 +1,8 @@
 """
-Kairós: Motor de Analítica Prescriptiva para Optimización Académica
+Kairos: Motor de Analitica Prescriptiva para Optimizacion Academica
 
-MVP diseñado para procesar trayectorias estudiantiles y prescribir la apertura 
-óptima de comisiones, cupos y horarios equilibrando graduación con eficiencia operativa.
+MVP disenado para procesar trayectorias estudiantiles y prescribir la apertura 
+optima de comisiones, cupos y horarios equilibrando graduacion con eficiencia operativa.
 """
 
 __version__ = "0.1.0"

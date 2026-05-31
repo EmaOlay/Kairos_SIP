@@ -1,9 +1,9 @@
 """
-Módulo ETL: Ingesta, validación y limpieza de datasets para Kairós
+Modulo ETL: Ingesta, validacion y limpieza de datasets para Kairos
 
 Procesa archivos planos (CSV, JSON) con trayectorias estudiantiles,
 planes de estudio y recursos disponibles. Valida tipos y estructura
-mediante Pydantic, y retorna objetos listos para el motor de optimización.
+mediante Pydantic, y retorna objetos listos para el motor de optimizacion.
 """
 
 import json
@@ -32,10 +32,10 @@ logger = logging.getLogger(__name__)
 
 class DataIngester:
     """
-    Ingesta y valida datasets para Kairós.
+    Ingesta y valida datasets para Kairos.
     
-    Maneja la lectura de archivos planos, validación de esquemas mediante Pydantic,
-    limpieza de registros inválidos, y retorna estructuras tipadas listas
+    Maneja la lectura de archivos planos, validacion de esquemas mediante Pydantic,
+    limpieza de registros invalidos, y retorna estructuras tipadas listas
     para procesamiento.
     """
 
@@ -53,14 +53,14 @@ class DataIngester:
         El JSON debe tener estructura:
         {
             "codigo_plan": "1621",
-            "nombre_carrera": "Ingeniería en Informática",
-            "año_vigencia": 2021,
-            "duracion_años": 5,
+            "nombre_carrera": "Ingenieria en Informatica",
+            "ano_vigencia": 2021,
+            "duracion_anos": 5,
             "materias": {
                 "3.4.069": {
                     "codigo": "3.4.069",
-                    "nombre": "Fundamentos de Informática",
-                    "año": 1,
+                    "nombre": "Fundamentos de Informatica",
+                    "ano": 1,
                     "cuatrimestre": 1,
                     ...
                 },
@@ -83,7 +83,7 @@ class DataIngester:
             self.plan_estudio = PlanEstudio(**data)
 
             logger.info(
-                f"✓ Plan cargado: {self.plan_estudio.nombre_carrera} "
+                f" Plan cargado: {self.plan_estudio.nombre_carrera} "
                 f"({len(self.plan_estudio.materias)} materias)"
             )
 
@@ -93,7 +93,7 @@ class DataIngester:
             logger.error(f"Error al parsear JSON: {e}")
             raise
         except ValidationError as e:
-            logger.error(f"Error de validación en plan de estudio: {e}")
+            logger.error(f"Error de validacion en plan de estudio: {e}")
             raise
 
     def cargar_trayectorias_estudiantes(
@@ -103,7 +103,7 @@ class DataIngester:
         Carga trayectorias de estudiantes desde CSV.
         
         CSV esperado:
-        | estudiante_id | codigo_carrera | plan_estudio_id | año_ingreso |
+        | estudiante_id | codigo_carrera | plan_estudio_id | ano_ingreso |
         |               |                |                 |             |
         | EST001        | ING_INF        | 1621            | 2020        |
         
@@ -124,7 +124,7 @@ class DataIngester:
                         estudiante_id=str(row["estudiante_id"]),
                         codigo_carrera=str(row["codigo_carrera"]),
                         plan_estudio_id=str(row["plan_estudio_id"]),
-                        año_ingreso=int(row["año_ingreso"]),
+                        ano_ingreso=int(row["ano_ingreso"]),
                         registros_trayectoria=[],
                     )
                     self.estudiantes[est.estudiante_id] = est
@@ -138,10 +138,10 @@ class DataIngester:
                             "data": row.to_dict(),
                         }
                     )
-                    logger.warning(f"Fila {_} inválida: {e.error_count()} errores")
+                    logger.warning(f"Fila {_} invalida: {e.error_count()} errores")
 
             logger.info(
-                f"✓ {len(self.estudiantes)} estudiantes cargados "
+                f" {len(self.estudiantes)} estudiantes cargados "
                 f"({len(self.errores_validacion)} rechazados)"
             )
 
@@ -159,9 +159,9 @@ class DataIngester:
         Carga registros individuales de materias cursadas/aprobadas.
         
         CSV esperado:
-        | estudiante_id | codigo_materia | nombre_materia | estado    | año_academico |
+        | estudiante_id | codigo_materia | nombre_materia | estado    | ano_academico |
         |               |                |                |           |               |
-        | EST001        | 3.4.069        | Fund. Informática | aprobada  | 2020          |
+        | EST001        | 3.4.069        | Fund. Informatica | aprobada  | 2020          |
         """
         logger.info(f"Cargando registros de trayectoria desde: {ruta_csv}")
 
@@ -177,7 +177,7 @@ class DataIngester:
                         estudiante_id=est_id,
                         codigo_carrera="UNKNOWN",
                         plan_estudio_id="UNKNOWN",
-                        año_ingreso=2020,
+                        ano_ingreso=2020,
                     )
 
                 for _, row in grupo.iterrows():
@@ -191,7 +191,7 @@ class DataIngester:
                             codigo_materia=str(row["codigo_materia"]),
                             nombre_materia=str(row["nombre_materia"]),
                             estado=EstadoMateria(row["estado"].lower()),
-                            año_academico=int(row["año_academico"]),
+                            ano_academico=int(row["ano_academico"]),
                             cuatrimestre=int(row.get("cuatrimestre", 1)),
                             calificacion=float(row["calificacion"])
                             if pd.notna(row.get("calificacion"))
@@ -213,7 +213,7 @@ class DataIngester:
                         )
 
             logger.info(
-                f"✓ {len(self.estudiantes)} estudiantes con registros "
+                f" {len(self.estudiantes)} estudiantes con registros "
                 f"({len(self.errores_validacion)} registros rechazados)"
             )
 
@@ -228,9 +228,9 @@ class DataIngester:
         Carga recursos disponibles (comisiones, cupos, horarios).
         
         CSV esperado:
-        | recurso_id | codigo_materia | nombre_materia | año_academico | cupos_totales |
+        | recurso_id | codigo_materia | nombre_materia | ano_academico | cupos_totales |
         |            |                |                |               |               |
-        | COM001     | 3.4.069        | Fund. Informática | 2025          | 50            |
+        | COM001     | 3.4.069        | Fund. Informatica | 2025          | 50            |
         """
         logger.info(f"Cargando recursos disponibles desde: {ruta_csv}")
 
@@ -239,7 +239,7 @@ class DataIngester:
 
             for _, row in df.iterrows():
                 try:
-                    # Parse lista de días (si viene en string)
+                    # Parse lista de dias (si viene en string)
                     dias = []
                     if pd.notna(row.get("dias_semana")):
                         dias_str = row["dias_semana"]
@@ -250,7 +250,7 @@ class DataIngester:
                         recurso_id=str(row["recurso_id"]),
                         codigo_materia=str(row["codigo_materia"]),
                         nombre_materia=str(row["nombre_materia"]),
-                        año_academico=int(row["año_academico"]),
+                        ano_academico=int(row["ano_academico"]),
                         cuatrimestre=int(row.get("cuatrimestre", 1)),
                         cupos_totales=int(row["cupos_totales"]),
                         cupos_ocupados=int(row.get("cupos_ocupados", 0)),
@@ -282,7 +282,7 @@ class DataIngester:
                     )
 
             logger.info(
-                f"✓ {len(self.recursos)} recursos cargados "
+                f" {len(self.recursos)} recursos cargados "
                 f"({len([e for e in self.errores_validacion if e['tipo'] == 'RecursoDisponible'])} rechazados)"
             )
 
@@ -298,13 +298,13 @@ class DataIngester:
         
         Chequea:
         - Que todas las materias en registros existan en el plan
-        - Que todos los estudiantes tengan plan válido
-        - Consistencia en años/cuatrimestres
+        - Que todos los estudiantes tengan plan valido
+        - Consistencia en anos/cuatrimestres
         """
         problemas = []
 
         if self.plan_estudio is None:
-            problemas.append("No se cargó plan de estudio")
+            problemas.append("No se cargo plan de estudio")
             return (len(problemas) == 0, problemas)
 
         # Validar materias en registros
@@ -322,16 +322,16 @@ class DataIngester:
                     f"Recurso {recurso.recurso_id}: materia {recurso.codigo_materia} no existe"
                 )
 
-        logger.info(f"Validación: {'✓ OK' if not problemas else f'✗ {len(problemas)} problemas'}")
+        logger.info(f"Validacion: {' OK' if not problemas else f' {len(problemas)} problemas'}")
 
         return (len(problemas) == 0, problemas)
 
     def generar_reporte_errores(self) -> str:
-        """Genera reporte de errores de validación"""
+        """Genera reporte de errores de validacion"""
         if not self.errores_validacion:
-            return "✓ Sin errores de validación"
+            return " Sin errores de validacion"
 
-        reporte = [f"\n{'='*70}", "REPORTE DE ERRORES DE VALIDACIÓN"]
+        reporte = [f"\n{'='*70}", "REPORTE DE ERRORES DE VALIDACION"]
         reporte.append(f"{'='*70}\n")
 
         por_tipo = {}
@@ -346,7 +346,7 @@ class DataIngester:
             for err in errores[:5]:  # Mostrar primeros 5
                 reporte.append(f"  - {err.get('error', 'Error desconocido')}")
             if len(errores) > 5:
-                reporte.append(f"  ... y {len(errores) - 5} más")
+                reporte.append(f"  ... y {len(errores) - 5} mas")
 
         reporte.append(f"\n{'='*70}\n")
         return "\n".join(reporte)

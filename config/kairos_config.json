@@ -1,0 +1,14 @@
+{
+  "kairos": {
+    "min_tasa_ocupacion": 0.6,
+    "max_cupos_por_comision": 50,
+    "weight_tasa_graduacion": 0.7,
+    "weight_eficiencia_operativa": 0.3,
+    "anos_estudio": 5,
+    "cuatrimestres_por_ano": 2
+  },
+  "optimization": {
+    "threshold_demanda_minima": 3,
+    "penalizacion_costo_operativo": 100
+  }
+}

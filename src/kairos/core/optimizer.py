@@ -1,11 +1,11 @@
 """
-Motor core de Kairós: Clase KairosOptimizer
+Motor core de Kairos: Clase KairosOptimizer
 
-Implementa el algoritmo de análisis prescriptivo basado en:
+Implementa el algoritmo de analisis prescriptivo basado en:
 - Grafo de correlatividades (NetworkX)
-- Análisis de trayectorias estudiantiles
-- Optimización de recursos académicos
-- Prescripción de apertura de comisiones
+- Analisis de trayectorias estudiantiles
+- Optimizacion de recursos academicos
+- Prescripcion de apertura de comisiones
 """
 
 from typing import Dict, List, Set, Tuple, Optional
@@ -28,12 +28,12 @@ logger = logging.getLogger(__name__)
 
 class KairosOptimizer:
     """
-    Motor de análisis y prescripción de ofertas académicas.
+    Motor de analisis y prescripcion de ofertas academicas.
     
-    Procesa trayectorias estudiantiles y construye un modelo de optimización
+    Procesa trayectorias estudiantiles y construye un modelo de optimizacion
     basado en grafo de correlatividades, demanda de estudiantes y restricciones
-    operativas. Prescribe automáticamente qué comisiones abrir para maximizar
-    graduación y eficiencia.
+    operativas. Prescribe automaticamente que comisiones abrir para maximizar
+    graduacion y eficiencia.
     """
 
     def __init__(
@@ -57,14 +57,14 @@ class KairosOptimizer:
         self.demanda_por_materia: Dict[str, Set[str]] = defaultdict(set)
         
         self._inicializar_grafo()
-        logger.info(f"✓ KairosOptimizer inicializado para {plan_estudio.nombre_carrera}")
+        logger.info(f" KairosOptimizer inicializado para {plan_estudio.nombre_carrera}")
 
     def _inicializar_grafo(self) -> None:
         """
         Construye el grafo dirigido de correlatividades.
         
-        Nodos: códigos de materias
-        Aristas: X → Y significa que X es prerequisito de Y (debe aprobarse antes)
+        Nodos: codigos de materias
+        Aristas: X  Y significa que X es prerequisito de Y (debe aprobarse antes)
         """
         logger.info("Inicializando grafo de correlatividades...")
 
@@ -77,33 +77,33 @@ class KairosOptimizer:
                     self.grafo_correlativas.add_edge(prerequisito, codigo)
 
         logger.info(
-            f"✓ Grafo construido: {len(self.grafo_correlativas.nodes)} nodos, "
+            f" Grafo construido: {len(self.grafo_correlativas.nodes)} nodos, "
             f"{len(self.grafo_correlativas.edges)} aristas"
         )
 
     def agregar_estudiante(self, estudiante: EstudianteTrayectoria) -> None:
-        """Agrega un estudiante al motor para análisis"""
+        """Agrega un estudiante al motor para analisis"""
         self.estudiantes[estudiante.estudiante_id] = estudiante
 
     def agregar_estudiantes(self, estudiantes: Dict[str, EstudianteTrayectoria]) -> None:
-        """Agrega múltiples estudiantes"""
+        """Agrega multiples estudiantes"""
         self.estudiantes.update(estudiantes)
-        logger.info(f"✓ {len(self.estudiantes)} estudiantes agregados")
+        logger.info(f" {len(self.estudiantes)} estudiantes agregados")
 
     def agregar_recursos(self, recursos: List[RecursoDisponible]) -> None:
         """Agrega recursos (comisiones) disponibles"""
         for recurso in recursos:
             self.recursos[recurso.recurso_id] = recurso
-        logger.info(f"✓ {len(self.recursos)} recursos agregados")
+        logger.info(f" {len(self.recursos)} recursos agregados")
 
     def analizar_demanda(self) -> Dict[str, int]:
         """
-        Analiza qué materias necesitan los estudiantes actualmente.
+        Analiza que materias necesitan los estudiantes actualmente.
         
         Retorna: {codigo_materia: cantidad_estudiantes_que_la_necesitan}
         
         Un estudiante "necesita" una materia si:
-        - Aún no la aprobó
+        - Aun no la aprobo
         - Cumple todos los prerequisitos
         """
         self.demanda_por_materia.clear()
@@ -130,11 +130,11 @@ class KairosOptimizer:
         self, estudiante: EstudianteTrayectoria
     ) -> Set[str]:
         """
-        Calcula qué materias puede cursar un estudiante según correlativas.
+        Calcula que materias puede cursar un estudiante segun correlativas.
         
-        Retorna el conjunto de códigos de materias que:
-        1. Aún no aprobó
-        2. Todos sus prerequisitos están aprobados
+        Retorna el conjunto de codigos de materias que:
+        1. Aun no aprobo
+        2. Todos sus prerequisitos estan aprobados
         """
         aprobadas = estudiante.materias_aprobadas
 
@@ -157,14 +157,14 @@ class KairosOptimizer:
 
     def prescribir_aperturas(self) -> Dict[str, Dict]:
         """
-        Prescribe qué comisiones abrir para el próximo período.
+        Prescribe que comisiones abrir para el proximo periodo.
         
         Optimiza balanceando:
-        - Maximizar materias demandadas (graduación)
+        - Maximizar materias demandadas (graduacion)
         - Minimizar costos operativos (eficiencia)
-        - Respetar restricciones de ocupación mínima
+        - Respetar restricciones de ocupacion minima
         
-        Retorna: {codigo_materia: {decision, razón, estudiantes_demandantes}}
+        Retorna: {codigo_materia: {decision, razon, estudiantes_demandantes}}
         """
         logger.info("Analizando demanda y prescribiendo aperturas...")
 
@@ -175,22 +175,22 @@ class KairosOptimizer:
         for codigo, cantidad in demanda.items():
             materia = self.plan.materias[codigo]
 
-            # Decidir si abrir basado en demanda vs. configuración
+            # Decidir si abrir basado en demanda vs. configuracion
             tasa_necesaria = self.config.min_tasa_ocupacion
             cupos_minimos = int(self.config.max_cupos_por_comision * tasa_necesaria)
 
             decision = "ABRIR" if cantidad >= cupos_minimos else "NO ABRIR"
 
-            razón = (
+            razon = (
                 f"Demanda de {cantidad} estudiantes "
-                f"(mínimo: {cupos_minimos})"
+                f"(minimo: {cupos_minimos})"
             )
 
             prescripciones[codigo] = {
                 "codigo": codigo,
                 "nombre": materia.nombre,
                 "decision": decision,
-                "razon": razón,
+                "razon": razon,
                 "demanda": cantidad,
                 "estudiantes_demandantes": list(self.demanda_por_materia[codigo]),
             }
@@ -200,14 +200,14 @@ class KairosOptimizer:
     def calcular_promedio_estudiante(
         self, estudiante_id: str
     ) -> Optional[float]:
-        """Obtiene el promedio académico de un estudiante"""
+        """Obtiene el promedio academico de un estudiante"""
         if estudiante_id not in self.estudiantes:
             return None
         return self.estudiantes[estudiante_id].promedio_academico
 
     def generar_grafo_visualizable(self) -> Dict:
         """
-        Genera representación del grafo para visualización.
+        Genera representacion del grafo para visualizacion.
         
         Retorna diccionario con nodos y edges para bibliotecas como Vis.js
         """
@@ -217,8 +217,8 @@ class KairosOptimizer:
                 "id": codigo,
                 "label": materia.nombre[:30],  # Truncar para legibilidad
                 "title": materia.nombre,
-                "year": materia.año,
-                "color": self._color_por_año(materia.año),
+                "year": materia.ano,
+                "color": self._color_por_ano(materia.ano),
             })
 
         edges = []
@@ -236,8 +236,8 @@ class KairosOptimizer:
             "total_edges": len(edges),
         }
 
-    def _color_por_año(self, año: int) -> str:
-        """Retorna color para visualizar por año"""
+    def _color_por_ano(self, ano: int) -> str:
+        """Retorna color para visualizar por ano"""
         colores = {
             1: "#FF6B6B",  # Rojo
             2: "#4ECDC4",  # Turquesa
@@ -245,24 +245,24 @@ class KairosOptimizer:
             4: "#FFA502",  # Naranja
             5: "#95E1D3",  # Verde menta
         }
-        return colores.get(año, "#cccccc")
+        return colores.get(ano, "#cccccc")
 
     def detectar_cuellos_de_botella(self) -> List[Dict]:
         """
-        Detecta materias críticas (muchos prerequisites o muchos dependientes).
+        Detecta materias criticas (muchos prerequisites o muchos dependientes).
         
         Estas son materias donde los retrasos cascadean significativamente.
         """
         cuellos = []
 
         for codigo, materia in self.plan.materias.items():
-            # Contar in-degree (cuántos prerequisitos)
+            # Contar in-degree (cuantos prerequisitos)
             in_degree = self.grafo_correlativas.in_degree(codigo)
             
-            # Contar out-degree (cuántas materias la necesitan)
+            # Contar out-degree (cuantas materias la necesitan)
             out_degree = self.grafo_correlativas.out_degree(codigo)
 
-            # Crítica si tiene muchas materias dependientes
+            # Critica si tiene muchas materias dependientes
             if out_degree >= 3:
                 cuellos.append({
                     "codigo": codigo,
@@ -279,13 +279,13 @@ class KairosOptimizer:
         """Genera reporte completo de prescripciones"""
         reporte = [
             f"\n{'='*70}",
-            "REPORTE PRESCRIPTIVO DE KAIRÓS",
+            "REPORTE PRESCRIPTIVO DE KAIROS",
             f"Carrera: {self.plan.nombre_carrera}",
             f"{'='*70}\n",
         ]
 
         # Demanda
-        reporte.append("ANÁLISIS DE DEMANDA:")
+        reporte.append("ANALISIS DE DEMANDA:")
         demanda = self.analizar_demanda()
         demanda_total = sum(demanda.values())
         reporte.append(f"  Total de "
@@ -300,9 +300,9 @@ class KairosOptimizer:
 
         reporte.append(f"  A ABRIR: {len(a_abrir)}")
         for p in a_abrir[:5]:
-            reporte.append(f"    • {p['codigo']}: {p['nombre']} ({p['demanda']} estudiantes)")
+            reporte.append(f"     {p['codigo']}: {p['nombre']} ({p['demanda']} estudiantes)")
         if len(a_abrir) > 5:
-            reporte.append(f"    ... y {len(a_abrir) - 5} más")
+            reporte.append(f"    ... y {len(a_abrir) - 5} mas")
 
         reporte.append(f"\n  NO ABRIR: {len(no_abrir)}")
 
@@ -312,7 +312,7 @@ class KairosOptimizer:
             reporte.append(f"\nCUELLOS DE BOTELLA:")
             for cuello in cuellos[:5]:
                 reporte.append(
-                    f"  • {cuello['codigo']}: "
+                    f"   {cuello['codigo']}: "
                     f"{cuello['materias_dependientes']} dependientes "
                     f"(Criticidad: {cuello['criticidad']})"
                 )
