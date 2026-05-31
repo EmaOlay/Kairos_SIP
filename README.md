@@ -67,20 +67,17 @@ Procesamiento del grafo de correlatividades y algoritmo de optimizacion prescrip
 - [x] Docker + docker-compose setup
 - [x] Demo con 3 escenarios (baja/alta/mixta demanda)
 - [x] Parser de correlatividades (scripts/parser_correlativas.py)
-- [x] Modulo ETL inicial (ingester.py)
+- [x] Modulo ETL inicial (ingester.py) con `validar_integridad()` completo
+- [x] Suite de tests unitarios (Schemas, ETL, Core, Utils) con +60 casos
+- [x] Deteccion de ciclos en el grafo de correlatividades
 
 ### Pendientes
 
 #### Prioridad Alta (Proximas 2 sprints)
-- [ ] **Tests unitarios**: Data models y validaciones
-- [ ] **Tests unitarios**: Optimizer (demanda, prescripciones, correlativas)
-- [ ] **Completar ETL**:
-  - [ ] Terminar metodo `validar_integridad()` en ingester.py
-  - [ ] Manejo robusto de errores y datos invalidos
-  - [ ] Tests de integracion para loaders CSV/JSON
+- [ ] **Manejo robusto de errores**: Refinar capturas y reportes en ETL
+- [ ] **Tests de integracion**: Flujo completo desde CSV hasta Prescripcion
 - [ ] **Grafo de correlatividades**:
-  - [ ] Implementar correlativas_anteriores/posteriores correctamente
-  - [ ] Detectar ciclos en el grafo
+  - [ ] Implementar correlativas_anteriores/posteriores correctamente (bidireccional)
   - [ ] Validacion de caminos validos
 
 #### Prioridad Media (Siguientes 2 sprints)
@@ -110,8 +107,9 @@ Procesamiento del grafo de correlatividades y algoritmo de optimizacion prescrip
 
 ## Proximas Etapas
 
-Comenzar con la suite de tests para validar funcionalidad existente,
-seguido por completar el modulo ETL y exponerlo via API REST.
+Refinar el manejo de errores en el modulo ETL y comenzar con la implementacion 
+de la **API REST** para exponer las funcionalidades del motor prescriptivo.
+Seguir ampliando la cobertura de tests a medida que se agregan nuevas funcionalidades.
 
 ## Licencia
 

@@ -247,6 +247,18 @@ class KairosOptimizer:
         }
         return colores.get(ano, "#cccccc")
 
+    def tiene_ciclos(self) -> bool:
+        """
+        Se fija si el plan de estudio tiene algun rulo (ciclo).
+        Si hay un ciclo, los pibes nunca se van a recibir, asi que ojo.
+        """
+        try:
+            ciclo = nx.find_cycle(self.grafo_correlativas, orientation="original")
+            logger.warning(f"¡Ojo! Se detecto un ciclo en el plan: {ciclo}")
+            return True
+        except nx.NetworkXNoCycle:
+            return False
+
     def detectar_cuellos_de_botella(self) -> List[Dict]:
         """
         Detecta materias criticas (muchos prerequisites o muchos dependientes).

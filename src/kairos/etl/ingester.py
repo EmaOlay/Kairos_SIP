@@ -307,6 +307,14 @@ class DataIngester:
             problemas.append("No se cargo plan de estudio")
             return (len(problemas) == 0, problemas)
 
+        # Validar que los pibes tengan el codigo de plan que corresponde
+        for est_id, est in self.estudiantes.items():
+            if est.plan_estudio_id != self.plan_estudio.codigo_plan:
+                problemas.append(
+                    f"Estudiante {est_id}: plan {est.plan_estudio_id} no coincide con "
+                    f"el cargado ({self.plan_estudio.codigo_plan})"
+                )
+
         # Validar materias en registros
         for est_id, est in self.estudiantes.items():
             for registro in est.registros_trayectoria:
@@ -314,6 +322,15 @@ class DataIngester:
                     problemas.append(
                         f"Estudiante {est_id}: materia {registro.codigo_materia} no existe en plan"
                     )
+                else:
+                    # Chequear consistencia de anos/cuatrimestres (opcional, pero sirve)
+                    materia_plan = self.plan_estudio.materias[registro.codigo_materia]
+                    # Solo loguear si hay discrepancia grosera, no frenar por esto
+                    if registro.ano_academico < est.ano_ingreso:
+                        logger.warning(
+                            f"Ojo: Estudiante {est_id} curso {registro.codigo_materia} "
+                            f"antes de ingresar ({registro.ano_academico} < {est.ano_ingreso})"
+                        )
 
         # Validar materias en recursos
         for recurso in self.recursos:
