@@ -7,6 +7,7 @@ interface Prescription {
   turno: string;
   ingreso_por_alumno: number;
   decision: 'ABRIR' | 'NO ABRIR';
+  razon: string;
   demanda: number;
   score: number;
   desbloquea: number;
@@ -54,6 +55,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
               <th title="Cantidad de alumnos que necesitan esta materia y prefieren este turno">Demanda</th>
               <th title="Cuántas materias se habilitan transitivamente en la carrera si se aprueba esta">Desbloquea</th>
               <th title="ABRIR = el motor recomienda abrir. NO ABRIR = no conviene con estos parámetros">Decisión</th>
+              <th title="Justificación generada por el motor según score, presupuesto y cascada">Razón</th>
             </tr>
           </thead>
           <tbody>
@@ -71,6 +73,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
                     {item.decision}
                   </span>
                 </td>
+                <td className={styles.reason}>{item.razon}</td>
               </tr>
             ))}
           </tbody>
