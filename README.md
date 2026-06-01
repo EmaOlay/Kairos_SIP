@@ -24,6 +24,28 @@ docker-compose -f docker-compose.demo.yml up --build
 
 ---
 
+## Base de Datos (RF-008)
+
+El stack levanta un PostgreSQL 16 (`kairos-db`) con un volumen persistente.
+La API se conecta via `DATABASE_URL` (default: `postgresql+psycopg://kairos:kairos@kairos-db:5432/kairos`).
+
+### Aplicar migraciones
+```bash
+docker-compose run --rm kairos-api alembic upgrade head
+```
+
+### Cargar el plan UADE en la DB (seed)
+```bash
+docker-compose run --rm kairos-api python scripts/seed_db.py
+```
+
+### Crear una nueva migracion
+```bash
+docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripcion"
+```
+
+---
+
 ## Estado del Proyecto
 
 ### Completado
