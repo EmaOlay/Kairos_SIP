@@ -118,15 +118,19 @@ const Dashboard: React.FC = () => {
       if (!data?.codigo_plan) {
         throw new Error('El JSON no parece un plan (falta codigo_plan)');
       }
-      const yaExiste = planes.some(p => p.codigo_plan === data.codigo_plan);
-      if (yaExiste) {
-        const ok = window.confirm(
-          `Ya existe el plan ${data.codigo_plan}. ¿Reemplazarlo?`
-        );
-        if (!ok) {
-          setIngestBusy(false);
-          return;
-        }
+      const cantidad = data.materias ? Object.keys(data.materias).length : 0;
+      const existente = planes.find(p => p.codigo_plan === data.codigo_plan);
+      const mensaje = existente
+        ? `Vas a REEMPLAZAR el plan ${existente.codigo_plan} (${existente.nombre_carrera}, ${existente.cantidad_materias} materias) ` +
+          `con el archivo "${file.name}":\n\n` +
+          `  ${data.codigo_plan} - ${data.nombre_carrera ?? '(sin nombre)'} (${cantidad} materias)\n\n` +
+          `¿Confirmar?`
+        : `Vas a ingestar el plan:\n\n` +
+          `  ${data.codigo_plan} - ${data.nombre_carrera ?? '(sin nombre)'} (${cantidad} materias)\n\n` +
+          `Archivo: ${file.name}\n\n¿Confirmar?`;
+      if (!window.confirm(mensaje)) {
+        setIngestBusy(false);
+        return;
       }
       const summary = await kairosService.ingestarPlan(data);
       await refreshPlanes(summary.codigo_plan);
@@ -150,6 +154,18 @@ const Dashboard: React.FC = () => {
       const data = await readJsonFile(file);
       if (!Array.isArray(data)) {
         throw new Error('El JSON debe ser una lista de estudiantes');
+      }
+      const planesIds = Array.from(
+        new Set(data.map((e: any) => e?.plan_estudio_id).filter(Boolean))
+      );
+      const planesStr = planesIds.length > 0 ? planesIds.join(', ') : '(sin plan_estudio_id)';
+      const mensaje =
+        `Vas a ingestar ${data.length} estudiantes del archivo "${file.name}".\n\n` +
+        `Planes referenciados: ${planesStr}\n\n` +
+        `Los estudiantes que ya existan (mismo estudiante_id) seran reemplazados.\n\n¿Confirmar?`;
+      if (!window.confirm(mensaje)) {
+        setIngestBusy(false);
+        return;
       }
       const res = await kairosService.ingestarEstudiantes(data);
       let msg = `Estudiantes persistidos: ${res.persistidos} (rechazados: ${res.rechazados}).`;
