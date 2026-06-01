@@ -31,6 +31,14 @@ export interface ProcessingRequest {
 }
 
 export const kairosService = {
+  async getConfig(): Promise<KairosConfig> {
+    const response = await fetch(`${API_BASE_URL}/config`);
+    if (!response.ok) {
+      throw new Error('Error cargando configuración');
+    }
+    return response.json();
+  },
+
   async processDemanda(request: ProcessingRequest) {
     const response = await fetch(`${API_BASE_URL}/process`, {
       method: 'POST',

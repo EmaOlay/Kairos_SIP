@@ -66,6 +66,18 @@ async def procesar_demanda(request: RequestProcesamiento):
         # Si se rompe algo, no queremos que muera en silencio
         raise HTTPException(status_code=500, detail=f"Se armo bardo en el motor: {str(e)}")
 
+@router.get("/config")
+async def obtener_config():
+    """Devuelve la configuracion default del motor para sincronizar con el frontend."""
+    config = ConfiguracionKairos()
+    return {
+        "weight_tasa_graduacion": config.weight_tasa_graduacion,
+        "weight_eficiencia_operativa": config.weight_eficiencia_operativa,
+        "min_tasa_ocupacion": config.min_tasa_ocupacion,
+        "max_cupos_por_comision": config.max_cupos_por_comision,
+        "max_comisiones_a_abrir": config.max_comisiones_a_abrir,
+    }
+
 @router.post("/graph")
 async def obtener_grafo(plan: PlanEstudio):
     """

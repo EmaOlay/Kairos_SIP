@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
 import type { Plan, Student, KairosConfig } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
@@ -19,6 +19,10 @@ const Dashboard: React.FC = () => {
     max_cupos_por_comision: 50,
     max_comisiones_a_abrir: null,
   });
+
+  useEffect(() => {
+    kairosService.getConfig().then(setConfig).catch(() => {});
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'plan' | 'students') => {
     const file = e.target.files?.[0];
