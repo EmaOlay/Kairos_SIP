@@ -1,8 +1,9 @@
 """
 Sesion y engine de SQLAlchemy.
 
-La URL se lee de la env var DATABASE_URL. Si no esta seteada,
-usamos un default apuntando al servicio de docker-compose.
+La URL se lee de la env var DATABASE_URL (configurable via .env).
+Si no esta seteada se cae al default de dev (servicio de docker-compose).
+En produccion DATABASE_URL siempre tiene que venir del entorno.
 """
 
 import os
@@ -13,12 +14,13 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 
-DEFAULT_DATABASE_URL = "postgresql+psycopg://kairos:kairos@kairos-db:5432/kairos"
+# Fallback solo para desarrollo local. En prod siempre seteamos DATABASE_URL.
+_DEV_FALLBACK_URL = "postgresql+psycopg://kairos:kairos@kairos-db:5432/kairos"
 
 
 def get_database_url() -> str:
     """Devuelve la URL de la DB desde el env, con fallback al servicio de docker."""
-    return os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    return os.getenv("DATABASE_URL", _DEV_FALLBACK_URL)
 
 
 def _build_engine(url: str) -> Engine:

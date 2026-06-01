@@ -4,15 +4,15 @@ services:
     image: postgres:16-alpine
     container_name: kairos-db
     environment:
-      - POSTGRES_USER=kairos
-      - POSTGRES_PASSWORD=kairos
-      - POSTGRES_DB=kairos
+      - POSTGRES_USER=${POSTGRES_USER:-kairos}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-kairos}
+      - POSTGRES_DB=${POSTGRES_DB:-kairos}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - kairos-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kairos -d kairos"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kairos} -d ${POSTGRES_DB:-kairos}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -35,9 +35,9 @@ services:
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
     environment:
-      - KAIROS_ENV=development
+      - KAIROS_ENV=${KAIROS_ENV:-development}
       - PYTHONPATH=/app/src
-      - DATABASE_URL=postgresql+psycopg://kairos:kairos@kairos-db:5432/kairos
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://kairos:kairos@kairos-db:5432/kairos}
     command: ["python", "scripts/run_api.py"]
     depends_on:
       kairos-db:

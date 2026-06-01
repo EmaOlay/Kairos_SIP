@@ -7,7 +7,7 @@ Es el cerebro que comunica el motor con el mundo exterior.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from kairos.api.v1.endpoints import optimizer
+from kairos.api.v1.endpoints import db_planes, optimizer
 
 app = FastAPI(
     title="Kairos API",
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # Incluimos los routers de la version 1
 app.include_router(optimizer.router, prefix="/api/v1", tags=["optimizer"])
+app.include_router(db_planes.router, prefix="/api/v1", tags=["db"])
 
 @app.get("/")
 async def root():
