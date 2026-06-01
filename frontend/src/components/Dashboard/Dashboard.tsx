@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
-import type { Plan, Student } from '../../services/kairosService';
+import type { Plan, Student, KairosConfig } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import styles from './Dashboard.module.css';
@@ -12,6 +12,17 @@ const Dashboard: React.FC = () => {
   const [graphData, setGraphData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<KairosConfig>({
+    weight_tasa_graduacion: 0.7,
+    weight_eficiencia_operativa: 0.3,
+    min_tasa_ocupacion: 0.6,
+    max_cupos_por_comision: 50,
+    max_comisiones_a_abrir: null,
+  });
+
+  useEffect(() => {
+    kairosService.getConfig().then(setConfig).catch(() => {});
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'plan' | 'students') => {
     const file = e.target.files?.[0];
@@ -35,6 +46,14 @@ const Dashboard: React.FC = () => {
     reader.readAsText(file);
   };
 
+  const handleWeightChange = (graduacion: number) => {
+    setConfig(prev => ({
+      ...prev,
+      weight_tasa_graduacion: graduacion,
+      weight_eficiencia_operativa: Math.round((1 - graduacion) * 100) / 100,
+    }));
+  };
+
   const processData = async () => {
     if (!plan || students.length === 0) {
       setError('Cargá el plan y los estudiantes primero, che.');
@@ -44,9 +63,9 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await kairosService.processDemanda({ plan, estudiantes: students });
+      const res = await kairosService.processDemanda({ plan, estudiantes: students, config });
       setResults(res);
-      
+
       const graph = await kairosService.getGraph(plan);
       setGraphData(graph);
     } catch (err: any) {
@@ -61,16 +80,16 @@ const Dashboard: React.FC = () => {
       <header className={styles.header}>
         <h1 className={styles.logo}>KAIROS <span className={styles.tag}>ENGINE</span></h1>
         <div className={styles.controls}>
-          <label className={styles.uploadBtn}>
-            Plan (JSON)
+          <label className={`${styles.uploadBtn} ${plan ? styles.uploadLoaded : ''}`}>
+            {plan ? `Plan cargado (${Object.keys(plan.materias).length} materias)` : 'Plan (JSON)'}
             <input type="file" accept=".json" onChange={(e) => handleFileUpload(e, 'plan')} hidden />
           </label>
-          <label className={styles.uploadBtn}>
-            Estudiantes (JSON)
+          <label className={`${styles.uploadBtn} ${students.length > 0 ? styles.uploadLoaded : ''}`}>
+            {students.length > 0 ? `${students.length} estudiantes cargados` : 'Estudiantes (JSON)'}
             <input type="file" accept=".json" onChange={(e) => handleFileUpload(e, 'students')} hidden />
           </label>
-          <button 
-            className={styles.processBtn} 
+          <button
+            className={styles.processBtn}
             onClick={processData}
             disabled={loading || !plan || students.length === 0}
           >
@@ -81,21 +100,73 @@ const Dashboard: React.FC = () => {
 
       {error && <div className={styles.error}>{error}</div>}
 
+      <section className={styles.configPanel}>
+        <h3 className={styles.configTitle}>Panel de Configuración</h3>
+        <div className={styles.sliderGroup}>
+          <div className={styles.sliderRow}>
+            <label>Cascada: <strong>{(config.weight_tasa_graduacion * 100).toFixed(0)}%</strong></label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={config.weight_tasa_graduacion * 100}
+              onChange={(e) => handleWeightChange(Number(e.target.value) / 100)}
+              className={styles.slider}
+            />
+            <label>Rentabilidad: <strong>{(config.weight_eficiencia_operativa * 100).toFixed(0)}%</strong></label>
+          </div>
+          <p className={styles.sliderHint}>
+            ← Prioriza materias que desbloquean la carrera | Prioriza comisiones que generan más ingreso →
+          </p>
+          <div className={styles.sliderRow}>
+            <label>Score mínimo para abrir: <strong>{(config.min_tasa_ocupacion * 10).toFixed(1)}</strong></label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={config.min_tasa_ocupacion * 100}
+              onChange={(e) => setConfig(prev => ({ ...prev, min_tasa_ocupacion: Number(e.target.value) / 100 }))}
+              className={styles.slider}
+            />
+          </div>
+          <p className={styles.sliderHint}>
+            Solo se abren comisiones con score mayor a este valor
+          </p>
+          <div className={styles.sliderRow}>
+            <label>Presupuesto (max comisiones): <strong>{config.max_comisiones_a_abrir ?? 'Sin límite'}</strong></label>
+            <input
+              type="range"
+              min="1"
+              max="52"
+              value={config.max_comisiones_a_abrir ?? 52}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setConfig(prev => ({ ...prev, max_comisiones_a_abrir: val >= 52 ? null : val }));
+              }}
+              className={styles.slider}
+            />
+          </div>
+          <p className={styles.sliderHint}>
+            Tope máximo de comisiones que la universidad puede abrir este cuatrimestre
+          </p>
+        </div>
+      </section>
+
       <main className={styles.content}>
         {results ? (
           <>
             <section className={styles.stats}>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
                 <span className={styles.statLabel}>Demanda Total</span>
                 <span className={styles.statValue}>{results.demanda_total}</span>
               </div>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
                 <span className={styles.statLabel}>Materias a Abrir</span>
                 <span className={styles.statValue}>
                   {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
                 </span>
               </div>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
                 <span className={styles.statLabel}>Cuellos de Botella</span>
                 <span className={styles.statValue}>{results.cuellos_botella.length}</span>
               </div>
@@ -103,7 +174,7 @@ const Dashboard: React.FC = () => {
 
             <div className={styles.grid}>
               <div className={styles.mainCol}>
-                <PrescriptionTable prescriptions={results.prescripciones} />
+                <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
               </div>
               <div className={styles.sideCol}>
                 {graphData && <GraphViewer data={graphData} />}

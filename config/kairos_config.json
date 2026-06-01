@@ -4,6 +4,7 @@
     "max_cupos_por_comision": 50,
     "weight_tasa_graduacion": 0.7,
     "weight_eficiencia_operativa": 0.3,
+    "max_comisiones_a_abrir": null,
     "anos_estudio": 5,
     "cuatrimestres_por_ano": 2
   },

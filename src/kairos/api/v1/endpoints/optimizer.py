@@ -7,7 +7,7 @@ y devolvemos las prescripciones.
 
 from fastapi import APIRouter, HTTPException
 from kairos.core.optimizer import KairosOptimizer
-from kairos.schemas.data_models import PlanEstudio
+from kairos.schemas.data_models import PlanEstudio, ConfiguracionKairos
 from kairos.api.schemas.optimizer import RequestProcesamiento, ResponsePrescripcion
 
 router = APIRouter()
@@ -45,18 +45,38 @@ async def procesar_demanda(request: RequestProcesamiento):
         # 5. Armar la respuesta
         resumen = optimizer.reporte_prescriptivo()
         
+        config_efectiva = request.config or ConfiguracionKairos()
         return ResponsePrescripcion(
             carrera=request.plan.nombre_carrera,
             prescripciones=prescripciones,
             cuellos_botella=cuellos,
             demanda_total=sum(demanda.values()),
             materias_con_demanda=len(demanda),
-            resumen=resumen
+            resumen=resumen,
+            config_usada={
+                "weight_tasa_graduacion": config_efectiva.weight_tasa_graduacion,
+                "weight_eficiencia_operativa": config_efectiva.weight_eficiencia_operativa,
+                "min_tasa_ocupacion": config_efectiva.min_tasa_ocupacion,
+                "max_cupos_por_comision": config_efectiva.max_cupos_por_comision,
+                "max_comisiones_a_abrir": config_efectiva.max_comisiones_a_abrir,
+            }
         )
 
     except Exception as e:
         # Si se rompe algo, no queremos que muera en silencio
         raise HTTPException(status_code=500, detail=f"Se armo bardo en el motor: {str(e)}")
+
+@router.get("/config")
+async def obtener_config():
+    """Devuelve la configuracion default del motor para sincronizar con el frontend."""
+    config = ConfiguracionKairos()
+    return {
+        "weight_tasa_graduacion": config.weight_tasa_graduacion,
+        "weight_eficiencia_operativa": config.weight_eficiencia_operativa,
+        "min_tasa_ocupacion": config.min_tasa_ocupacion,
+        "max_cupos_por_comision": config.max_cupos_por_comision,
+        "max_comisiones_a_abrir": config.max_comisiones_a_abrir,
+    }
 
 @router.post("/graph")
 async def obtener_grafo(plan: PlanEstudio):

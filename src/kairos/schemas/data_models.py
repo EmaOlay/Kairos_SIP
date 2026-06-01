@@ -41,7 +41,7 @@ class RegistroTrayectoria(BaseModel):
 class EstudianteTrayectoria(BaseModel):
     """
     Representa la trayectoria academica completa de un estudiante.
-    
+
     Abstraemos los datos personales especificos; solo nos importa
     el historial de cursadas y aprobaciones para el analisis prescriptivo.
     """
@@ -49,6 +49,7 @@ class EstudianteTrayectoria(BaseModel):
     codigo_carrera: str
     plan_estudio_id: str
     ano_ingreso: int
+    turno_preferido: str = "noche"
     registros_trayectoria: List[RegistroTrayectoria] = Field(
         default_factory=list,
         description="Historial de materias cursadas"
@@ -104,6 +105,12 @@ class Materia(BaseModel):
     correlativas_posteriores: List[str] = Field(
         default_factory=list,
         description="Codigos de materias que requieren esta como prereq"
+    )
+    turnos_disponibles: List[str] = Field(
+        default_factory=lambda: ["manana", "tarde", "noche"]
+    )
+    costo_por_turno: Dict[str, float] = Field(
+        default_factory=lambda: {"manana": 3000, "tarde": 4000, "noche": 6000}
     )
 
     @property
@@ -219,13 +226,14 @@ class RecursoDisponible(BaseModel):
 class ConfiguracionKairos(BaseModel):
     """
     Configuracion global para el motor de optimizacion.
-    
+
     Los valores por defecto se cargan desde config/kairos_config.json.
     """
     min_tasa_ocupacion: float = 0.6
     max_cupos_por_comision: int = 50
     weight_tasa_graduacion: float = 0.7
     weight_eficiencia_operativa: float = 0.3
+    max_comisiones_a_abrir: Optional[int] = None
     anos_estudio: int = 5
     cuatrimestres_por_ano: int = 2
 
