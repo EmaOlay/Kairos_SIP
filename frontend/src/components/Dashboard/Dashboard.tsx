@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
-import type { Plan, Student, KairosConfig } from '../../services/kairosService';
+import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
+  const [planes, setPlanes] = useState<PlanSummary[]>([]);
+  const [selectedPlanCode, setSelectedPlanCode] = useState<string>('');
   const [plan, setPlan] = useState<Plan | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [ingestBusy, setIngestBusy] = useState(false);
   const [config, setConfig] = useState<KairosConfig>({
     weight_tasa_graduacion: 0.7,
     weight_eficiencia_operativa: 0.3,
@@ -24,26 +29,142 @@ const Dashboard: React.FC = () => {
     kairosService.getConfig().then(setConfig).catch(() => {});
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'plan' | 'students') => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const lista = await kairosService.listPlanes();
+        if (cancelled) return;
+        setPlanes(lista);
+        if (lista.length > 0) {
+          setSelectedPlanCode(lista[0].codigo_plan);
+        } else {
+          setBootstrapping(false);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Error listando planes');
+          setBootstrapping(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPlanCode) return;
+    let cancelled = false;
+    setBootstrapping(true);
+    (async () => {
+      try {
+        const [p, ests] = await Promise.all([
+          kairosService.getPlan(selectedPlanCode),
+          kairosService.getEstudiantes(selectedPlanCode),
+        ]);
+        if (cancelled) return;
+        setPlan(p);
+        setStudents(ests);
+        setResults(null);
+        setGraphData(null);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Error cargando datos del plan');
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPlanCode]);
+
+  const refreshPlanes = async (preferCodigo?: string): Promise<PlanSummary[]> => {
+    const lista = await kairosService.listPlanes();
+    setPlanes(lista);
+    if (preferCodigo && lista.some(p => p.codigo_plan === preferCodigo)) {
+      setSelectedPlanCode(preferCodigo);
+    } else if (lista.length > 0 && !lista.some(p => p.codigo_plan === selectedPlanCode)) {
+      setSelectedPlanCode(lista[0].codigo_plan);
+    }
+    return lista;
+  };
+
+  const readJsonFile = (file: File): Promise<any> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          resolve(JSON.parse(e.target?.result as string));
+        } catch (err: any) {
+          reject(new Error(`JSON invalido: ${err.message}`));
+        }
+      };
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsText(file);
+    });
+
+  const handlePlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        if (type === 'plan') {
-          setPlan(JSON.parse(content));
-        } else {
-          // Para simplificar, asumimos que el CSV de estudiantes se parsea basicamenet o se manda crudo
-          // En un caso real usariamos papaparse. Aqui simulamos carga de JSON para probar flujo.
-          setStudents(JSON.parse(content));
-        }
-      } catch (err) {
-        setError(`Error parseando el archivo ${type}. Asegurate que sea JSON.`);
+    setError(null);
+    setInfo(null);
+    setIngestBusy(true);
+    try {
+      const data = await readJsonFile(file);
+      if (!data?.codigo_plan) {
+        throw new Error('El JSON no parece un plan (falta codigo_plan)');
       }
-    };
-    reader.readAsText(file);
+      const yaExiste = planes.some(p => p.codigo_plan === data.codigo_plan);
+      if (yaExiste) {
+        const ok = window.confirm(
+          `Ya existe el plan ${data.codigo_plan}. ¿Reemplazarlo?`
+        );
+        if (!ok) {
+          setIngestBusy(false);
+          return;
+        }
+      }
+      const summary = await kairosService.ingestarPlan(data);
+      await refreshPlanes(summary.codigo_plan);
+      setInfo(`Plan ${summary.codigo_plan} ingestado (${summary.cantidad_materias} materias).`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIngestBusy(false);
+    }
+  };
+
+  const handleEstudiantesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setError(null);
+    setInfo(null);
+    setIngestBusy(true);
+    try {
+      const data = await readJsonFile(file);
+      if (!Array.isArray(data)) {
+        throw new Error('El JSON debe ser una lista de estudiantes');
+      }
+      const res = await kairosService.ingestarEstudiantes(data);
+      let msg = `Estudiantes persistidos: ${res.persistidos} (rechazados: ${res.rechazados}).`;
+      if (res.errores.length > 0) {
+        msg += ` Detalles: ${res.errores.slice(0, 3).join('; ')}${res.errores.length > 3 ? '…' : ''}`;
+      }
+      setInfo(msg);
+      if (selectedPlanCode) {
+        const ests = await kairosService.getEstudiantes(selectedPlanCode);
+        setStudents(ests);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIngestBusy(false);
+    }
   };
 
   const handleWeightChange = (graduacion: number) => {
@@ -55,15 +176,15 @@ const Dashboard: React.FC = () => {
   };
 
   const processData = async () => {
-    if (!plan || students.length === 0) {
-      setError('Cargá el plan y los estudiantes primero, che.');
+    if (!plan || !selectedPlanCode) {
+      setError('Seleccioná un plan primero, che.');
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const res = await kairosService.processDemanda({ plan, estudiantes: students, config });
+      const res = await kairosService.processFromDb(selectedPlanCode, config);
       setResults(res);
 
       const graph = await kairosService.getGraph(plan);
@@ -80,18 +201,26 @@ const Dashboard: React.FC = () => {
       <header className={styles.header}>
         <h1 className={styles.logo}>KAIROS <span className={styles.tag}>ENGINE</span></h1>
         <div className={styles.controls}>
-          <label className={`${styles.uploadBtn} ${plan ? styles.uploadLoaded : ''}`}>
-            {plan ? `Plan cargado (${Object.keys(plan.materias).length} materias)` : 'Plan (JSON)'}
-            <input type="file" accept=".json" onChange={(e) => handleFileUpload(e, 'plan')} hidden />
-          </label>
-          <label className={`${styles.uploadBtn} ${students.length > 0 ? styles.uploadLoaded : ''}`}>
-            {students.length > 0 ? `${students.length} estudiantes cargados` : 'Estudiantes (JSON)'}
-            <input type="file" accept=".json" onChange={(e) => handleFileUpload(e, 'students')} hidden />
-          </label>
+          <select
+            className={styles.planSelect}
+            value={selectedPlanCode}
+            onChange={(e) => setSelectedPlanCode(e.target.value)}
+            disabled={planes.length === 0 || bootstrapping}
+          >
+            {planes.length === 0 && <option value="">Sin planes en la DB</option>}
+            {planes.map((p) => (
+              <option key={p.codigo_plan} value={p.codigo_plan}>
+                {p.nombre_carrera} ({p.cantidad_materias} materias)
+              </option>
+            ))}
+          </select>
+          <span className={styles.studentsBadge}>
+            {bootstrapping ? 'Cargando…' : `${students.length} estudiantes`}
+          </span>
           <button
             className={styles.processBtn}
             onClick={processData}
-            disabled={loading || !plan || students.length === 0}
+            disabled={loading || bootstrapping || !plan}
           >
             {loading ? 'Procesando...' : 'Prender Motor'}
           </button>
@@ -99,6 +228,36 @@ const Dashboard: React.FC = () => {
       </header>
 
       {error && <div className={styles.error}>{error}</div>}
+      {info && <div className={styles.info}>{info}</div>}
+
+      <section className={styles.ingestPanel}>
+        <h3 className={styles.configTitle}>Ingesta de datos</h3>
+        <div className={styles.ingestRow}>
+          <label className={styles.uploadBtn}>
+            {ingestBusy ? 'Procesando…' : 'Importar Plan (JSON)'}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handlePlanUpload}
+              disabled={ingestBusy}
+              hidden
+            />
+          </label>
+          <label className={styles.uploadBtn}>
+            {ingestBusy ? 'Procesando…' : 'Importar Estudiantes (JSON)'}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleEstudiantesUpload}
+              disabled={ingestBusy}
+              hidden
+            />
+          </label>
+          <span className={styles.ingestHint}>
+            Los archivos se persisten en la DB. Plan duplicado pide confirmación.
+          </span>
+        </div>
+      </section>
 
       <section className={styles.configPanel}>
         <h3 className={styles.configTitle}>Panel de Configuración</h3>
@@ -194,7 +353,7 @@ const Dashboard: React.FC = () => {
         ) : (
           <div className={styles.empty}>
             <h2>Listo para optimizar.</h2>
-            <p>Subí los archivos y dale al botón de "Prender Motor".</p>
+            <p>{bootstrapping ? 'Cargando datos desde la DB…' : 'Dale al botón de "Prender Motor".'}</p>
           </div>
         )}
       </main>
