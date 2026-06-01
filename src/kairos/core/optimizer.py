@@ -136,12 +136,8 @@ class KairosOptimizer:
     def analizar_demanda(self) -> Dict[str, int]:
         """
         Analiza que materias necesitan los estudiantes actualmente.
-        
+
         Retorna: {codigo_materia: cantidad_estudiantes_que_la_necesitan}
-        
-        Un estudiante "necesita" una materia si:
-        - Aun no la aprobo
-        - Cumple todos los prerequisitos
         """
         self.demanda_por_materia.clear()
 
@@ -151,17 +147,30 @@ class KairosOptimizer:
             for codigo in materias_disponibles:
                 self.demanda_por_materia[codigo].add(est.estudiante_id)
 
-        # Convertir a conteo
         demanda = {k: len(v) for k, v in self.demanda_por_materia.items()}
-
-        # Log de top 10
-        top_10 = sorted(demanda.items(), key=lambda x: x[1], reverse=True)[:10]
-        logger.info("Top 10 materias por demanda:")
-        for codigo, cantidad in top_10:
-            materia = self.plan.materias[codigo]
-            logger.info(f"  {codigo}: {materia.nombre} ({cantidad} estudiantes)")
-
         return demanda
+
+    def analizar_demanda_por_turno(self) -> Dict[Tuple[str, str], Set[str]]:
+        """
+        Splitea la demanda por materia+turno segun el turno preferido de cada estudiante.
+
+        Retorna: {(codigo_materia, turno): set de estudiante_ids}
+        """
+        demanda_turno: Dict[Tuple[str, str], Set[str]] = defaultdict(set)
+
+        for est in self.estudiantes.values():
+            materias_disponibles = self._calcular_materias_disponibles(est)
+
+            for codigo in materias_disponibles:
+                materia = self.plan.materias[codigo]
+                turno = est.turno_preferido
+                if turno in materia.turnos_disponibles:
+                    demanda_turno[(codigo, turno)].add(est.estudiante_id)
+                else:
+                    # Si su turno preferido no esta disponible, cae al primer turno disponible
+                    demanda_turno[(codigo, materia.turnos_disponibles[0])].add(est.estudiante_id)
+
+        return demanda_turno
 
     def _calcular_materias_disponibles(
         self, estudiante: EstudianteTrayectoria
@@ -192,45 +201,92 @@ class KairosOptimizer:
 
         return disponibles
 
+    def _calcular_impacto_cascada(self, codigo: str) -> int:
+        """
+        Cuenta cuántas materias se desbloquean transitivamente desde esta materia.
+        Si aprobás esta, cuántas más se te abren a lo largo de toda la carrera.
+        """
+        descendientes = nx.descendants(self.grafo_correlativas, codigo)
+        return len(descendientes)
+
+    def _calcular_score(self, codigo: str, demanda: int, costo: float) -> float:
+        """
+        Calcula el score prescriptivo combinando tres variables:
+
+        - Cascada: cuántas materias se desbloquean transitivamente
+        - Demanda: cuántos alumnos necesitan esta materia en este turno
+        - Costo: precio de abrir esa comisión en ese turno
+
+        score = (weight_graduacion × cascada) + (weight_eficiencia × demanda / costo_normalizado)
+
+        weight_graduacion alto → prioriza materias que desbloquean la carrera
+        weight_eficiencia alto → prioriza materias con mejor relación alumnos/precio
+        """
+        cascada = self._calcular_impacto_cascada(codigo)
+        eficiencia = demanda / (costo / 1000)
+
+        score = (
+            self.config.weight_tasa_graduacion * cascada
+            + self.config.weight_eficiencia_operativa * eficiencia
+        )
+        return round(score, 2)
+
     def prescribir_aperturas(self) -> Dict[str, Dict]:
         """
-        Prescribe que comisiones abrir para el proximo periodo.
-        
-        Optimiza balanceando:
-        - Maximizar materias demandadas (graduacion)
-        - Minimizar costos operativos (eficiencia)
-        - Respetar restricciones de ocupacion minima
-        
-        Retorna: {codigo_materia: {decision, razon, estudiantes_demandantes}}
-        """
-        logger.info("Analizando demanda y prescribiendo aperturas...")
+        Prescribe que comisiones abrir por materia+turno.
 
-        demanda = self.analizar_demanda()
+        Splitea la demanda por turno preferido del alumno, calcula el score
+        de cada combinación materia+turno usando cascada + demanda/costo,
+        y rankea para decidir cuáles abrir.
+        """
+        logger.info("Analizando demanda por turno y prescribiendo aperturas...")
+
+        self.analizar_demanda()
+        demanda_turno = self.analizar_demanda_por_turno()
 
         prescripciones = {}
+        ranking = []
 
-        for codigo, cantidad in demanda.items():
+        for (codigo, turno), estudiantes_set in demanda_turno.items():
             materia = self.plan.materias[codigo]
+            cantidad = len(estudiantes_set)
+            costo = materia.costo_por_turno.get(turno, 5000)
+            score = self._calcular_score(codigo, cantidad, costo)
+            cascada = self._calcular_impacto_cascada(codigo)
+            ranking.append((codigo, turno, materia, score, cantidad, cascada, costo, list(estudiantes_set)))
 
-            # Decidir si abrir basado en demanda vs. configuracion
-            tasa_necesaria = self.config.min_tasa_ocupacion
-            cupos_minimos = int(self.config.max_cupos_por_comision * tasa_necesaria)
+        ranking.sort(key=lambda x: x[3], reverse=True)
 
-            decision = "ABRIR" if cantidad >= cupos_minimos else "NO ABRIR"
+        max_score = ranking[0][3] if ranking else 1
+        tope = self.config.max_comisiones_a_abrir
+        abiertas = 0
 
-            razon = (
-                f"Demanda de {cantidad} estudiantes "
-                f"(minimo: {cupos_minimos})"
-            )
+        for codigo, turno, materia, score, cantidad, cascada, costo, est_list in ranking:
+            score_normalizado = score / max_score if max_score > 0 else 0
+            supera_umbral = score_normalizado >= self.config.min_tasa_ocupacion
 
-            prescripciones[codigo] = {
+            if supera_umbral and (tope is None or abiertas < tope):
+                decision = "ABRIR"
+                abiertas += 1
+            else:
+                decision = "NO ABRIR"
+
+            key = f"{codigo}_{turno}"
+            prescripciones[key] = {
                 "codigo": codigo,
                 "nombre": materia.nombre,
+                "turno": turno,
+                "costo": costo,
                 "decision": decision,
-                "razon": razon,
                 "demanda": cantidad,
-                "estudiantes_demandantes": list(self.demanda_por_materia[codigo]),
+                "score": score,
+                "desbloquea": cascada,
+                "estudiantes_demandantes": est_list,
             }
+
+        prescripciones = dict(
+            sorted(prescripciones.items(), key=lambda x: x[1]["score"], reverse=True)
+        )
 
         return prescripciones
 

@@ -16,10 +16,18 @@ export interface Student {
   registros_trayectoria?: any[];
 }
 
+export interface KairosConfig {
+  weight_tasa_graduacion: number;
+  weight_eficiencia_operativa: number;
+  min_tasa_ocupacion: number;
+  max_cupos_por_comision: number;
+  max_comisiones_a_abrir: number | null;
+}
+
 export interface ProcessingRequest {
   plan: Plan;
   estudiantes: Student[];
-  config?: any;
+  config?: KairosConfig;
 }
 
 export const kairosService = {

@@ -29,3 +29,4 @@ class ResponsePrescripcion(BaseModel):
     demanda_total: int
     materias_con_demanda: int
     resumen: str
+    config_usada: Optional[Dict[str, Any]] = None

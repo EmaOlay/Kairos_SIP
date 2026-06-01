@@ -1,0 +1,990 @@
+{
+  "codigo_plan": "1621",
+  "nombre_carrera": "Ingeniería En Informática",
+  "ano_vigencia": "2021",
+  "duracion_anos": 5,
+  "materias": {
+    "2.1.002": {
+      "codigo": "2.1.002",
+      "nombre": "Pensamiento Crítico y Comunicación",
+      "ano": 1,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.050": {
+      "codigo": "3.1.050",
+      "nombre": "Elementos de Álgebra y Geometría",
+      "ano": 1,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.1.051"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.043": {
+      "codigo": "3.4.043",
+      "nombre": "Teoría de Sistemas",
+      "ano": 1,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.069": {
+      "codigo": "3.4.069",
+      "nombre": "Fundamentos de Informática",
+      "ano": 1,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.4.071"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.164": {
+      "codigo": "3.4.164",
+      "nombre": "Sistemas de Información I",
+      "ano": 1,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.4.207"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.024": {
+      "codigo": "3.1.024",
+      "nombre": "Matemática Discreta",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.4.209"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.051": {
+      "codigo": "3.1.051",
+      "nombre": "Álgebra",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.1.050"
+      ],
+      "correlativas_posteriores": [
+        "3.1.052"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.2.178": {
+      "codigo": "3.2.178",
+      "nombre": "Fundamentos de Química",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.3.121": {
+      "codigo": "3.3.121",
+      "nombre": "Sistemas de Representación",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.071": {
+      "codigo": "3.4.071",
+      "nombre": "Programación I",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.069"
+      ],
+      "correlativas_posteriores": [
+        "3.4.074",
+        "3.4.208"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.072": {
+      "codigo": "3.4.072",
+      "nombre": "Arquitectura de Computadores",
+      "ano": 1,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.4.075"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.052": {
+      "codigo": "3.1.052",
+      "nombre": "Física I",
+      "ano": 2,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.1.051"
+      ],
+      "correlativas_posteriores": [
+        "3.1.055"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.053": {
+      "codigo": "3.1.053",
+      "nombre": "Cálculo I",
+      "ano": 2,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [
+        "3.1.049"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.074": {
+      "codigo": "3.4.074",
+      "nombre": "Programación II",
+      "ano": 2,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.071"
+      ],
+      "correlativas_posteriores": [
+        "3.4.077",
+        "3.4.211"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.075": {
+      "codigo": "3.4.075",
+      "nombre": "Sistemas Operativos",
+      "ano": 2,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.072"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.207": {
+      "codigo": "3.4.207",
+      "nombre": "Sistemas de Información II",
+      "ano": 2,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.164"
+      ],
+      "correlativas_posteriores": [
+        "3.4.089",
+        "3.4.094",
+        "3.4.211",
+        "3.4.214"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.054": {
+      "codigo": "3.1.054",
+      "nombre": "Cálculo II",
+      "ano": 2,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.077": {
+      "codigo": "3.4.077",
+      "nombre": "Programación III",
+      "ano": 2,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.074"
+      ],
+      "correlativas_posteriores": [
+        "3.4.215"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.078": {
+      "codigo": "3.4.078",
+      "nombre": "Fundamentos de Telecomunicaciones",
+      "ano": 2,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.208": {
+      "codigo": "3.4.208",
+      "nombre": "Paradigma Orientado a Objetos",
+      "ano": 2,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.071"
+      ],
+      "correlativas_posteriores": [
+        "3.4.082",
+        "3.4.210"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.209": {
+      "codigo": "3.4.209",
+      "nombre": "Ingeniería de Datos I",
+      "ano": 2,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.1.024"
+      ],
+      "correlativas_posteriores": [
+        "3.4.211",
+        "3.4.213"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "2.4.216": {
+      "codigo": "2.4.216",
+      "nombre": "Examen de Inglés",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000
+      }
+    },
+    "3.1.049": {
+      "codigo": "3.1.049",
+      "nombre": "Probabilidad y Estadística",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.1.053"
+      ],
+      "correlativas_posteriores": [
+        "3.1.056",
+        "3.4.217",
+        "3.4.086"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "noche": 6000
+      }
+    },
+    "3.4.210": {
+      "codigo": "3.4.210",
+      "nombre": "Proceso de Desarrollo de Software",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.208"
+      ],
+      "correlativas_posteriores": [
+        "3.4.216",
+        "3.4.218"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "manana": 3000
+      }
+    },
+    "3.4.211": {
+      "codigo": "3.4.211",
+      "nombre": "Seminario de Integración Profesional",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.207",
+        "3.4.209",
+        "3.4.074"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "3.4.212": {
+      "codigo": "3.4.212",
+      "nombre": "Teleinformática y Redes",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "noche": 6000
+      }
+    },
+    "3.4.213": {
+      "codigo": "3.4.213",
+      "nombre": "Ingeniería de Datos II",
+      "ano": 3,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.209"
+      ],
+      "correlativas_posteriores": [
+        "3.4.217"
+      ],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "3.1.055": {
+      "codigo": "3.1.055",
+      "nombre": "Física II",
+      "ano": 3,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.1.052"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.056": {
+      "codigo": "3.1.056",
+      "nombre": "Estadística Avanzada",
+      "ano": 3,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.1.049"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000
+      }
+    },
+    "3.4.082": {
+      "codigo": "3.4.082",
+      "nombre": "Aplicaciones Interactivas",
+      "ano": 3,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.208"
+      ],
+      "correlativas_posteriores": [
+        "3.4.218"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "manana": 3000,
+        "noche": 6000
+      }
+    },
+    "3.4.214": {
+      "codigo": "3.4.214",
+      "nombre": "Ingeniería de Software",
+      "ano": 3,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.207"
+      ],
+      "correlativas_posteriores": [
+        "3.4.098"
+      ],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "3.4.215": {
+      "codigo": "3.4.215",
+      "nombre": "Teoría de la Computación",
+      "ano": 3,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.077"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.1.025": {
+      "codigo": "3.1.025",
+      "nombre": "Modelado y Simulación",
+      "ano": 4,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.089": {
+      "codigo": "3.4.089",
+      "nombre": "Dirección de Proyectos Informáticos",
+      "ano": 4,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.207"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.092": {
+      "codigo": "3.4.092",
+      "nombre": "Seguridad e Integridad de la Información",
+      "ano": 4,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "manana": 3000
+      }
+    },
+    "3.4.216": {
+      "codigo": "3.4.216",
+      "nombre": "Desarrollo de Aplicaciones I",
+      "ano": 4,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.210"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "manana": 3000
+      }
+    },
+    "3.4.217": {
+      "codigo": "3.4.217",
+      "nombre": "Ciencia de Datos",
+      "ano": 4,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.213",
+        "3.1.049"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "1": {
+      "codigo": "1",
+      "nombre": "Optativa I",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "noche": 6000,
+        "manana": 3000
+      }
+    },
+    "3.4.086": {
+      "codigo": "3.4.086",
+      "nombre": "Evaluación de Proyectos Informáticos",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.1.049"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "noche": 6000
+      }
+    },
+    "3.4.096": {
+      "codigo": "3.4.096",
+      "nombre": "Inteligencia Artificial",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "3.4.218": {
+      "codigo": "3.4.218",
+      "nombre": "Desarrollo de Aplicaciones II",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [
+        "3.4.082",
+        "3.4.210"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "manana": 3000
+      }
+    },
+    "3.4.219": {
+      "codigo": "3.4.219",
+      "nombre": "Tecnología y Medio Ambiente",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000
+      }
+    },
+    "PPS06": {
+      "codigo": "PPS06",
+      "nombre": "Práctica Profesional Supervisada",
+      "ano": 4,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "manana": 3000,
+        "noche": 6000
+      }
+    },
+    "2": {
+      "codigo": "2",
+      "nombre": "Optativa II",
+      "ano": 5,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana"
+      ],
+      "costo_por_turno": {
+        "manana": 3000
+      }
+    },
+    "3.4.094": {
+      "codigo": "3.4.094",
+      "nombre": "Arquitectura de Aplicaciones",
+      "ano": 5,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.207"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000
+      }
+    },
+    "3.4.098": {
+      "codigo": "3.4.098",
+      "nombre": "Calidad de Software",
+      "ano": 5,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [
+        "3.4.214"
+      ],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000,
+        "manana": 3000
+      }
+    },
+    "3.4.100": {
+      "codigo": "3.4.100",
+      "nombre": "Proyecto Final de Ingeniería en Informática",
+      "ano": 5,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche"
+      ],
+      "costo_por_turno": {
+        "noche": 6000
+      }
+    },
+    "3.4.220": {
+      "codigo": "3.4.220",
+      "nombre": "Tendencias Tecnológicas",
+      "ano": 5,
+      "cuatrimestre": 1,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "manana": 3000,
+        "tarde": 4000
+      }
+    },
+    "2.3.056": {
+      "codigo": "2.3.056",
+      "nombre": "Derecho Informático",
+      "ano": 5,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "tarde": 4000
+      }
+    },
+    "3": {
+      "codigo": "3",
+      "nombre": "Optativa III",
+      "ano": 5,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "tarde": 4000
+      }
+    },
+    "3.4.135": {
+      "codigo": "3.4.135",
+      "nombre": "Tecnología e Innovación",
+      "ano": 5,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "manana"
+      ],
+      "costo_por_turno": {
+        "manana": 3000
+      }
+    },
+    "3.4.221": {
+      "codigo": "3.4.221",
+      "nombre": "Negocios Tecnológicos",
+      "ano": 5,
+      "cuatrimestre": 2,
+      "correlativas_anteriores": [],
+      "correlativas_posteriores": [],
+      "turnos_disponibles": [
+        "noche",
+        "tarde"
+      ],
+      "costo_por_turno": {
+        "noche": 6000,
+        "tarde": 4000
+      }
+    }
+  }
+}
