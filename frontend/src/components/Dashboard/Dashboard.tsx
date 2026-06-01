@@ -119,10 +119,10 @@ const Dashboard: React.FC = () => {
             ← Prioriza materias que desbloquean la carrera | Prioriza comisiones que generan más ingreso →
           </p>
           <div className={styles.sliderRow}>
-            <label>Exigencia para abrir: <strong>{(config.min_tasa_ocupacion * 100).toFixed(0)}%</strong></label>
+            <label>Score mínimo para abrir: <strong>{(config.min_tasa_ocupacion * 10).toFixed(1)}</strong></label>
             <input
               type="range"
-              min="10"
+              min="0"
               max="100"
               value={config.min_tasa_ocupacion * 100}
               onChange={(e) => setConfig(prev => ({ ...prev, min_tasa_ocupacion: Number(e.target.value) / 100 }))}
@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
             />
           </div>
           <p className={styles.sliderHint}>
-            Qué porcentaje del score máximo debe tener una materia para ser abierta
+            Solo se abren comisiones con score mayor a este valor
           </p>
           <div className={styles.sliderRow}>
             <label>Presupuesto (max comisiones): <strong>{config.max_comisiones_a_abrir ?? 'Sin límite'}</strong></label>
@@ -156,17 +156,17 @@ const Dashboard: React.FC = () => {
         {results ? (
           <>
             <section className={styles.stats}>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
                 <span className={styles.statLabel}>Demanda Total</span>
                 <span className={styles.statValue}>{results.demanda_total}</span>
               </div>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
                 <span className={styles.statLabel}>Materias a Abrir</span>
                 <span className={styles.statValue}>
                   {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
                 </span>
               </div>
-              <div className={styles.statCard}>
+              <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
                 <span className={styles.statLabel}>Cuellos de Botella</span>
                 <span className={styles.statValue}>{results.cuellos_botella.length}</span>
               </div>
@@ -174,7 +174,7 @@ const Dashboard: React.FC = () => {
 
             <div className={styles.grid}>
               <div className={styles.mainCol}>
-                <PrescriptionTable prescriptions={results.prescripciones} />
+                <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
               </div>
               <div className={styles.sideCol}>
                 {graphData && <GraphViewer data={graphData} />}

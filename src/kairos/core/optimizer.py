@@ -254,15 +254,14 @@ class KairosOptimizer:
 
         ranking.sort(key=lambda x: x[3], reverse=True)
 
-        max_score = ranking[0][3] if ranking else 1
+        score_minimo = self.config.min_tasa_ocupacion * 10
         tope = self.config.max_comisiones_a_abrir
         abiertas = 0
 
         for codigo, turno, materia, score, cantidad, cascada, ingreso, est_list in ranking:
-            score_normalizado = score / max_score if max_score > 0 else 0
-            supera_umbral = score_normalizado >= self.config.min_tasa_ocupacion
+            supera_minimo = score >= score_minimo
 
-            if supera_umbral and (tope is None or abiertas < tope):
+            if supera_minimo and (tope is None or abiertas < tope):
                 decision = "ABRIR"
                 abiertas += 1
             else:
