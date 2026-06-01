@@ -4,6 +4,25 @@
 Kairos es un MVP de motor de analitica prescriptiva disenado para optimizar la oferta academica en universidades. 
 El sistema procesa trayectorias estudiantiles y reglas curriculares para prescribir la apertura optima de comisiones, balanceando la tasa de graduacion con la eficiencia operativa.
 
+## Configuracion (.env)
+
+Las credenciales y la URL de la DB son configurables via variables de entorno.
+Antes de levantar el stack, copia el template:
+
+```bash
+cp .env.example .env
+```
+
+El archivo `.env` esta gitignoreado (no se commitea). Edita los valores que
+quieras cambiar (usuario/password/puerto de Postgres, `DATABASE_URL`, etc.).
+Si no haces nada, `docker-compose` usa los defaults razonables del template
+(usuario y password `kairos` para dev local).
+
+> Cambia los defaults antes de cualquier deploy productivo. El `.env.example`
+> es solo una plantilla con valores de desarrollo.
+
+---
+
 ## Como levantarlo (Con Docker - ¡La forma facil!)
 
 Tenes dos opciones segun que quieras hacer:
