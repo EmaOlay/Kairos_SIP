@@ -18,10 +18,11 @@ const GraphViewer: React.FC<GraphViewerProps> = ({ data }) => {
 
     const nodes = new DataSet(data.nodes.map(node => ({
       ...node,
-      font: { color: '#f0f6fc', face: 'Inter' },
+      level: node.year,
+      font: { color: '#f0f6fc', face: 'Inter', size: 13 },
       shape: 'box',
       margin: 10,
-      widthConstraint: { maximum: 150 },
+      widthConstraint: { maximum: 160 },
       borderWidth: 2,
       shadow: true
     })));
@@ -43,16 +44,20 @@ const GraphViewer: React.FC<GraphViewerProps> = ({ data }) => {
         }
       },
       physics: {
-        enabled: true,
-        hierarchicalRepulsion: { nodeDistance: 200 },
-        solver: 'hierarchicalRepulsion'
+        enabled: false,
       },
       layout: {
         hierarchical: {
+          enabled: true,
           direction: 'LR',
           sortMethod: 'directed',
-          levelSeparation: 250,
-          nodeSpacing: 100
+          shakeTowards: 'roots',
+          levelSeparation: 280,
+          nodeSpacing: 80,
+          treeSpacing: 200,
+          blockShifting: true,
+          edgeMinimization: true,
+          parentCentralization: true,
         }
       },
       interaction: {

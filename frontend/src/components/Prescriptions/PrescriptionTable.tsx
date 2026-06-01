@@ -7,6 +7,7 @@ interface Prescription {
   turno: string;
   ingreso_por_alumno: number;
   decision: 'ABRIR' | 'NO ABRIR';
+  razon: string;
   demanda: number;
   score: number;
   desbloquea: number;
@@ -72,6 +73,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
                     {item.decision}
                   </span>
                 </td>
+                <td className={styles.reason}>{item.razon}</td>
               </tr>
             ))}
           </tbody>
