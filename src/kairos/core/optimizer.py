@@ -263,8 +263,23 @@ class KairosOptimizer:
 
             if supera_minimo and (tope is None or abiertas < tope):
                 decision = "ABRIR"
+                razon = (
+                    f"Score {score} ≥ mínimo {score_minimo:.1f}. "
+                    f"Desbloquea {cascada} materias y junta {cantidad} alumnos "
+                    f"(${cantidad * ingreso:,} de ingreso)."
+                )
                 abiertas += 1
+            elif not supera_minimo:
+                razon = (
+                    f"Score {score} < mínimo {score_minimo:.1f}. "
+                    f"Demanda baja ({cantidad} alumnos) o poco impacto en cascada ({cascada})."
+                )
+                decision = "NO ABRIR"
             else:
+                razon = (
+                    f"Tope presupuestario alcanzado ({tope} comisiones). "
+                    f"Score {score} no entró en el ranking."
+                )
                 decision = "NO ABRIR"
 
             key = f"{codigo}_{turno}"

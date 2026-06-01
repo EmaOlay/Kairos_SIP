@@ -54,6 +54,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
               <th title="Cantidad de alumnos que necesitan esta materia y prefieren este turno">Demanda</th>
               <th title="Cuántas materias se habilitan transitivamente en la carrera si se aprueba esta">Desbloquea</th>
               <th title="ABRIR = el motor recomienda abrir. NO ABRIR = no conviene con estos parámetros">Decisión</th>
+              <th title="Justificación generada por el motor según score, presupuesto y cascada">Razón</th>
             </tr>
           </thead>
           <tbody>
