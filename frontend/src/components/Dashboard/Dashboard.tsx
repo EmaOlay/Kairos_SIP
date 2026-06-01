@@ -109,10 +109,10 @@ const Dashboard: React.FC = () => {
               onChange={(e) => handleWeightChange(Number(e.target.value) / 100)}
               className={styles.slider}
             />
-            <label>Eficiencia: <strong>{(config.weight_eficiencia_operativa * 100).toFixed(0)}%</strong></label>
+            <label>Rentabilidad: <strong>{(config.weight_eficiencia_operativa * 100).toFixed(0)}%</strong></label>
           </div>
           <p className={styles.sliderHint}>
-            ← Prioriza materias que desbloquean la carrera | Prioriza mejor relación alumnos/costo del turno →
+            ← Prioriza materias que desbloquean la carrera | Prioriza comisiones que generan más ingreso →
           </p>
           <div className={styles.sliderRow}>
             <label>Exigencia para abrir: <strong>{(config.min_tasa_ocupacion * 100).toFixed(0)}%</strong></label>

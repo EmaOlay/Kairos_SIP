@@ -209,25 +209,22 @@ class KairosOptimizer:
         descendientes = nx.descendants(self.grafo_correlativas, codigo)
         return len(descendientes)
 
-    def _calcular_score(self, codigo: str, demanda: int, costo: float) -> float:
+    def _calcular_score(self, codigo: str, demanda: int, ingreso_por_alumno: float) -> float:
         """
-        Calcula el score prescriptivo combinando tres variables:
+        Calcula el score prescriptivo combinando dos dimensiones en escala comparable:
 
-        - Cascada: cuántas materias se desbloquean transitivamente
-        - Demanda: cuántos alumnos necesitan esta materia en este turno
-        - Costo: precio de abrir esa comisión en ese turno
+        - Cascada: cuántas materias se desbloquean transitivamente (0-~15)
+        - Rentabilidad: demanda × ingreso por alumno, normalizado a escala similar (0-~15)
 
-        score = (weight_graduacion × cascada) + (weight_eficiencia × demanda / costo_normalizado)
-
-        weight_graduacion alto → prioriza materias que desbloquean la carrera
-        weight_eficiencia alto → prioriza materias con mejor relación alumnos/precio
+        Ambos componentes se escalan para que los pesos realmente determinen la prioridad.
         """
         cascada = self._calcular_impacto_cascada(codigo)
-        eficiencia = demanda / (costo / 1000)
+        rentabilidad_raw = demanda * ingreso_por_alumno / 1000
+        rentabilidad = rentabilidad_raw / 30
 
         score = (
             self.config.weight_tasa_graduacion * cascada
-            + self.config.weight_eficiencia_operativa * eficiencia
+            + self.config.weight_eficiencia_operativa * rentabilidad
         )
         return round(score, 2)
 
@@ -250,10 +247,10 @@ class KairosOptimizer:
         for (codigo, turno), estudiantes_set in demanda_turno.items():
             materia = self.plan.materias[codigo]
             cantidad = len(estudiantes_set)
-            costo = materia.costo_por_turno.get(turno, 5000)
-            score = self._calcular_score(codigo, cantidad, costo)
+            ingreso = materia.costo_por_turno.get(turno, 5000)
+            score = self._calcular_score(codigo, cantidad, ingreso)
             cascada = self._calcular_impacto_cascada(codigo)
-            ranking.append((codigo, turno, materia, score, cantidad, cascada, costo, list(estudiantes_set)))
+            ranking.append((codigo, turno, materia, score, cantidad, cascada, ingreso, list(estudiantes_set)))
 
         ranking.sort(key=lambda x: x[3], reverse=True)
 
@@ -261,7 +258,7 @@ class KairosOptimizer:
         tope = self.config.max_comisiones_a_abrir
         abiertas = 0
 
-        for codigo, turno, materia, score, cantidad, cascada, costo, est_list in ranking:
+        for codigo, turno, materia, score, cantidad, cascada, ingreso, est_list in ranking:
             score_normalizado = score / max_score if max_score > 0 else 0
             supera_umbral = score_normalizado >= self.config.min_tasa_ocupacion
 
@@ -276,7 +273,7 @@ class KairosOptimizer:
                 "codigo": codigo,
                 "nombre": materia.nombre,
                 "turno": turno,
-                "costo": costo,
+                "ingreso_por_alumno": ingreso,
                 "decision": decision,
                 "demanda": cantidad,
                 "score": score,

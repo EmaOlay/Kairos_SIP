@@ -5,7 +5,7 @@ interface Prescription {
   codigo: string;
   nombre: string;
   turno: string;
-  costo: number;
+  ingreso_por_alumno: number;
   decision: 'ABRIR' | 'NO ABRIR';
   demanda: number;
   score: number;
@@ -35,7 +35,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions }) 
               <th>#</th>
               <th>Materia</th>
               <th>Turno</th>
-              <th>Costo</th>
+              <th>Ingreso/alumno</th>
               <th>Score</th>
               <th>Demanda</th>
               <th>Desbloquea</th>
@@ -48,7 +48,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions }) 
                 <td className={styles.rank}>{idx + 1}</td>
                 <td className={styles.name}>{item.nombre}</td>
                 <td className={styles.turno}>{turnoLabel[item.turno] || item.turno}</td>
-                <td className={styles.costo}>${item.costo?.toLocaleString()}</td>
+                <td className={styles.costo}>${item.ingreso_por_alumno?.toLocaleString()}</td>
                 <td className={styles.score}>{item.score?.toFixed(1)}</td>
                 <td className={styles.demand}>{item.demanda}</td>
                 <td className={styles.demand}>{item.desbloquea}</td>
