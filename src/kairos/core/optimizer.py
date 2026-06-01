@@ -289,7 +289,6 @@ class KairosOptimizer:
                 "turno": turno,
                 "ingreso_por_alumno": ingreso,
                 "decision": decision,
-                "razon": razon,
                 "demanda": cantidad,
                 "score": score,
                 "desbloquea": cascada,
