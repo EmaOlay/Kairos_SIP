@@ -77,6 +77,10 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 - [x] **Dashboard**: frontend en React + Vite + Vis.js con estética "Modern Tech Dark".
 - [x] **Persistencia (RF-008)**: PostgreSQL con SQLAlchemy 2.0 y migraciones gestionadas por Alembic.
 - [x] **Integración DB ↔ Front (RF-010)**: el frontend consume planes y estudiantes desde la base; soporta ingesta de JSON desde la UI.
+- [x] **Panel de configuración (RF-003)**: pesos cascada/rentabilidad ajustables por slider, score mínimo y tope de comisiones desde la UI; endpoint `GET /config` para defaults.
+- [x] **Scoring por materia + turno**: demanda splitteada por turno preferido del alumno; scoring combinando cascada transitiva e ingreso por alumno con normalización a escala comparable.
+- [x] **Mapa de correlatividades en pestaña aparte**: layout en tabs con grafo agrupado por año (LR hierárquico).
+- [x] **Justificación por prescripción**: columna Razón con el motivo de cada decisión (score ≥ mínimo, score bajo, tope presupuestario).
 - [x] **Datos reales**: validado con el plan 1621 de Ingeniería en Informática de UADE.
 - [x] **Dockerización**: entornos listos para desarrollo y demo.
 
@@ -86,8 +90,7 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 - [ ] **Datos**: generar datasets de ejemplo de recursos (comisiones disponibles).
 
 #### Prioridad baja
-- [ ] **Optimización avanzada**: pesos configurables (70% graduación, 30% eficiencia) ajustables por contexto.
-- [ ] **Simulaciones What-if**: predecir el impacto de cambios en el plan de estudios.
+- [ ] **Simulaciones What-if comparativas**: comparar 2 configuraciones lado a lado y diffear resultados (la simulación on-the-fly con sliders ya está hecha).
 
 ### Ideas para próximas iteraciones
 
