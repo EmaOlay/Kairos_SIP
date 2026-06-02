@@ -12,6 +12,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo'>('resultados');
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -330,41 +331,67 @@ const Dashboard: React.FC = () => {
       <main className={styles.content}>
         {results ? (
           <>
-            <section className={styles.stats}>
-              <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
-                <span className={styles.statLabel}>Demanda Total</span>
-                <span className={styles.statValue}>{results.demanda_total}</span>
-              </div>
-              <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
-                <span className={styles.statLabel}>Materias a Abrir</span>
-                <span className={styles.statValue}>
-                  {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
-                </span>
-              </div>
-              <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
-                <span className={styles.statLabel}>Cuellos de Botella</span>
-                <span className={styles.statValue}>{results.cuellos_botella.length}</span>
-              </div>
-            </section>
+            <div className={styles.tabs} role="tablist">
+              <button
+                role="tab"
+                aria-selected={activeTab === 'resultados'}
+                className={`${styles.tab} ${activeTab === 'resultados' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('resultados')}
+              >
+                Resultados
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === 'grafo'}
+                className={`${styles.tab} ${activeTab === 'grafo' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('grafo')}
+                disabled={!graphData}
+              >
+                Mapa de Correlatividades
+              </button>
+            </div>
 
-            <div className={styles.grid}>
-              <div className={styles.mainCol}>
-                <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
-              </div>
-              <div className={styles.sideCol}>
-                {graphData && <GraphViewer data={graphData} />}
+            {activeTab === 'resultados' && (
+              <>
+                <section className={styles.stats}>
+                  <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
+                    <span className={styles.statLabel}>Demanda Total</span>
+                    <span className={styles.statValue}>{results.demanda_total}</span>
+                  </div>
+                  <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
+                    <span className={styles.statLabel}>Materias a Abrir</span>
+                    <span className={styles.statValue}>
+                      {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
+                    </span>
+                  </div>
+                  <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
+                    <span className={styles.statLabel}>Cuellos de Botella</span>
+                    <span className={styles.statValue}>{results.cuellos_botella.length}</span>
+                  </div>
+                </section>
+
                 <div className={styles.bottlenecks}>
                   <h3 className={styles.subTitle}>Materias Críticas</h3>
-                  {results.cuellos_botella.map((c: any) => (
-                    <div key={c.codigo} className={styles.bottleneckItem}>
-                      <span className={styles.bCode}>{c.codigo}</span>
-                      <span className={styles.bName}>{c.nombre}</span>
-                      <span className={styles.bLevel}>{c.criticidad}</span>
-                    </div>
-                  ))}
+                  <div className={styles.bottleneckGrid}>
+                    {results.cuellos_botella.map((c: any) => (
+                      <div key={c.codigo} className={styles.bottleneckItem}>
+                        <span className={styles.bCode}>{c.codigo}</span>
+                        <span className={styles.bName}>{c.nombre}</span>
+                        <span className={styles.bLevel}>{c.criticidad}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
+              </>
+            )}
+
+            {activeTab === 'grafo' && graphData && (
+              <div className={styles.graphFull}>
+                <GraphViewer data={graphData} />
               </div>
-            </div>
+            )}
           </>
         ) : (
           <div className={styles.empty}>

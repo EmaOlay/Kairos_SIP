@@ -266,7 +266,7 @@ class KairosOptimizer:
                 razon = (
                     f"Score {score} ≥ mínimo {score_minimo:.1f}. "
                     f"Desbloquea {cascada} materias y junta {cantidad} alumnos "
-                    f"(${cantidad * ingreso:,} de ingreso)."
+                    f"(${int(cantidad * ingreso):,} de ingreso)."
                 )
                 abiertas += 1
             elif not supera_minimo:
@@ -289,6 +289,7 @@ class KairosOptimizer:
                 "turno": turno,
                 "ingreso_por_alumno": ingreso,
                 "decision": decision,
+                "razon": razon,
                 "demanda": cantidad,
                 "score": score,
                 "desbloquea": cascada,

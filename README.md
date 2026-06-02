@@ -77,6 +77,10 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 - [x] **Dashboard**: frontend en React + Vite + Vis.js con estética "Modern Tech Dark".
 - [x] **Persistencia (RF-008)**: PostgreSQL con SQLAlchemy 2.0 y migraciones gestionadas por Alembic.
 - [x] **Integración DB ↔ Front (RF-010)**: el frontend consume planes y estudiantes desde la base; soporta ingesta de JSON desde la UI.
+- [x] **Panel de configuración (RF-003)**: pesos cascada/rentabilidad ajustables por slider, score mínimo y tope de comisiones desde la UI; endpoint `GET /config` para defaults.
+- [x] **Scoring por materia + turno**: demanda splitteada por turno preferido del alumno; scoring combinando cascada transitiva e ingreso por alumno con normalización a escala comparable.
+- [x] **Mapa de correlatividades en pestaña aparte**: layout en tabs con grafo agrupado por año (LR hierárquico).
+- [x] **Justificación por prescripción**: columna Razón con el motivo de cada decisión (score ≥ mínimo, score bajo, tope presupuestario).
 - [x] **Datos reales**: validado con el plan 1621 de Ingeniería en Informática de UADE.
 - [x] **Dockerización**: entornos listos para desarrollo y demo.
 
@@ -86,8 +90,33 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 - [ ] **Datos**: generar datasets de ejemplo de recursos (comisiones disponibles).
 
 #### Prioridad baja
-- [ ] **Optimización avanzada**: pesos configurables (70% graduación, 30% eficiencia) ajustables por contexto.
-- [ ] **Simulaciones What-if**: predecir el impacto de cambios en el plan de estudios.
+- [ ] **Simulaciones What-if comparativas**: comparar 2 configuraciones lado a lado y diffear resultados (la simulación on-the-fly con sliders ya está hecha).
+
+### Ideas para próximas iteraciones
+
+Mejoras que extenderían el modelo de optimización para acercarlo a un escenario real de gestión académica:
+
+#### Datos del estudiante
+- [ ] **Estado financiero del alumno**: integrar cuotas pagas / morosidad. Despriorizar la demanda de alumnos no al día (no se inscriben efectivamente) o ponderarla por probabilidad de inscripción según historial de pago.
+- [ ] **Riesgo de deserción**: marcar alumnos en zona de abandono (sin actividad N cuatrimestres, materias arrastradas, baja regularidad) y priorizar abrirles materias críticas como retención.
+- [ ] **Preferencia horaria múltiple**: hoy cada alumno tiene un único `turno_preferido`. Modelarlo como ranking (1° elección, 2° elección, fallback) para distribuir mejor la demanda.
+
+#### Recursos operativos
+- [ ] **Capacidad de aulas**: cada turno tiene N aulas con M asientos. El motor debería respetar el techo de capacidad por turno y derivar overflow a otra franja.
+- [ ] **Disponibilidad de profesores**: pool de docentes con materias que pueden dictar y disponibilidad por turno. No abrir comisiones que no tengan docente asignable.
+- [ ] **Carga horaria docente**: balancear horas asignadas para no sobrecargar profesores ni dejar vacantes.
+
+#### Algoritmo
+- [ ] **Solver de optimización**: reemplazar el ranking greedy por un MILP (PuLP / OR-Tools) cuando se sumen las restricciones de aulas y profesores. El greedy alcanza para dimensiones chicas, pero con N restricciones duras conviene un solver.
+- [ ] **Restricciones de equidad (fairness)**: garantizar mínimo de comisiones por turno para no discriminar a alumnos que solo pueden cursar de mañana.
+- [ ] **Aprendizaje de pesos**: entrenar los pesos `cascada` vs `rentabilidad` con datos históricos (qué comisiones efectivamente se llenaron y se sostuvieron) en vez de fijarlos a mano.
+- [ ] **Análisis multi-cuatrimestre**: planificar 2-3 cuatrimestres hacia adelante, no solo el próximo. Permite anticipar cuellos de botella futuros.
+
+#### UX / Producto
+- [ ] **Comparador de escenarios**: simular dos configuraciones lado a lado y diffear resultados.
+- [ ] **Histórico de prescripciones**: persistir cada corrida en la DB y mostrar evolución entre cuatrimestres.
+- [ ] **Exportar a Excel/PDF**: para que el director comparta la propuesta con decanato.
+- [ ] **Alertas tempranas**: detectar materias que van a saturar (demanda > capacidad proyectada) o quedar vacías antes de que pase.
 
 ## Stack tecnológico
 
@@ -100,13 +129,45 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 
 ```
 kairos_sip/
- ├── src/kairos/       # Backend: núcleo del motor + API
- ├── frontend/         # Dashboard en React
- ├── scripts/          # Scripts de utilidad (seeds, demos)
- ├── alembic/          # Migraciones de la base de datos
- ├── tests/            # Suite de tests (+70 casos)
- ├── data/             # Datasets de prueba
- └── config/           # Configuración del motor
+ ├── src/kairos/                  # Backend (Python)
+ │    ├── core/                   # Motor prescriptivo: KairosOptimizer, scoring, grafo de correlativas
+ │    ├── api/                    # FastAPI app
+ │    │    ├── main.py            # Entry point + CORS + routers
+ │    │    ├── deps.py            # Dependencias inyectadas (sesión DB, etc.)
+ │    │    ├── schemas/           # Modelos Pydantic de request/response
+ │    │    └── v1/endpoints/      # Endpoints REST (planes, estudiantes, optimizer, graph)
+ │    ├── db/                     # SQLAlchemy: modelos ORM, session, repositorios
+ │    ├── etl/                    # Ingesta y validación de JSON/CSV (DataIngester)
+ │    ├── schemas/                # Modelos de dominio Pydantic (Plan, Materia, Estudiante, Config)
+ │    └── utils/                  # Helpers compartidos
+ ├── alembic/                     # Migraciones de base de datos
+ │    └── versions/               # Cada migración versionada
+ ├── frontend/                    # Dashboard (React + TypeScript + Vite)
+ │    └── src/
+ │         ├── components/
+ │         │    ├── Dashboard/    # Layout principal, tabs, panel de configuración
+ │         │    ├── Graph/        # Visualizador de correlativas (vis-network)
+ │         │    └── Prescriptions/# Tabla de prescripciones rankeadas
+ │         ├── services/          # Cliente HTTP del API (kairosService.ts)
+ │         └── styles/            # Variables CSS globales
+ ├── scripts/                     # Utilidades de línea de comandos
+ │    ├── run_api.py              # Levantar API local sin Docker
+ │    ├── seed_db.py              # Cargar plan + estudiantes UADE en la DB
+ │    ├── ejemplo_demo.py         # Corrida end-to-end del motor en consola
+ │    ├── validar_motor_real.py   # Validar el motor contra el plan UADE real
+ │    ├── generar_datos_uade.py   # Generar dataset sintético de estudiantes
+ │    ├── parser_correlativas.py  # Parsear el plan oficial a JSON
+ │    └── exportar_json_frontend.py # Exportar fixtures para el front
+ ├── tests/                       # Suite de tests (+70 casos: unitarios + integración)
+ ├── data/                        # Datasets de prueba
+ │    └── raw/                    # plan_uade_api.json, estudiantes_uade.json
+ ├── config/                      # Configuración del motor (kairos_config.json)
+ ├── docker/                      # Dockerfile del backend
+ ├── docker-compose.yml           # Stack completo: db + api + frontend
+ ├── docker-compose.demo.yml      # Demo en consola (motor sin UI)
+ ├── alembic.ini                  # Config de migraciones
+ ├── .env.example                 # Template de variables de entorno
+ └── pyproject.toml               # Dependencias Python
 ```
 
 ## Licencia

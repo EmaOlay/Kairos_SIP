@@ -131,7 +131,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
 }
@@ -144,18 +144,32 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 130px;
+  text-align: center;
 }
 
 .statLabel {
   color: var(--text-secondary);
   font-size: 0.9rem;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.2;
+  min-height: 2.4em;
+  display: flex;
+  align-items: center;
 }
 
 .statValue {
   font-size: 2.5rem;
   font-weight: 800;
   color: var(--accent-blue);
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 .grid {
@@ -175,6 +189,13 @@
   border: 1px solid var(--border-color);
   padding: var(--spacing-md);
   border-radius: 12px;
+  margin-bottom: var(--spacing-xl);
+}
+
+.bottleneckGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-sm);
 }
 
 .subTitle {
@@ -187,9 +208,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-sm);
   padding: 10px;
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   font-size: 0.9rem;
+}
+
+.bName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bCode {
@@ -310,4 +341,47 @@
   font-size: 2rem;
   color: var(--border-color);
   margin-bottom: var(--spacing-md);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--spacing-xl);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tabActive {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+.graphFull {
+  width: 100%;
+}
+
+.graphFull > * {
+  height: calc(100vh - 360px);
+  min-height: 600px;
 }
