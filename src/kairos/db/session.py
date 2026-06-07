@@ -9,9 +9,13 @@ En produccion DATABASE_URL siempre tiene que venir del entorno.
 import os
 from typing import Generator
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+
+# Cargar variables de entorno del archivo .env
+load_dotenv()
 
 
 # Fallback solo para desarrollo local. En prod siempre seteamos DATABASE_URL.

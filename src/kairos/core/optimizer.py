@@ -282,6 +282,45 @@ class KairosOptimizer:
                 )
                 decision = "NO ABRIR"
 
+            # Asignar aula y docente de manera híbrida (DB si existe, sino generados)
+            aula = "Aula Virtual" if turno == "virtual" else None
+            docente = None
+
+            # Buscar en recursos cargados
+            for r in self.recursos.values():
+                if r.codigo_materia == codigo:
+                    r_turno = "noche"
+                    try:
+                        hora = int(r.horario_inicio.split(":")[0])
+                        if hora < 13:
+                            r_turno = "manana"
+                        elif hora < 18:
+                            r_turno = "tarde"
+                    except Exception:
+                        pass
+                    if r_turno == turno:
+                        docente = r.docente_nombre
+                        if r.modalidad == "virtual":
+                            aula = "Aula Virtual"
+                        break
+
+            # Heurística determinista si no hay datos en la DB
+            import hashlib
+            h = int(hashlib.md5(codigo.encode('utf-8')).hexdigest(), 16)
+            if not docente:
+                nombres = ["Carlos", "Elena", "Martín", "Ana", "Lucas", "Sofía", "Jorge", "María", "Diego", "Laura", "Gabriel", "Patricia"]
+                apellidos = ["Gómez", "López", "Rodríguez", "Fernández", "González", "Pérez", "Martínez", "Sánchez", "Díaz", "Álvarez", "Rossi", "Bianchi"]
+                nombre_idx = (h + 3) % len(nombres)
+                apellido_idx = (h + 7) % len(apellidos)
+                titulo = "Dr." if (h % 3 == 0) else ("Dra." if h % 3 == 1 else "Ing.")
+                docente = f"{titulo} {nombres[nombre_idx]} {apellidos[apellido_idx]}"
+
+            if not aula:
+                room_number = 100 * materia.ano + (h % 20 + 1)
+                aula = f"Aula {room_number}"
+
+            bajo_cupo = cantidad < 15
+
             key = f"{codigo}_{turno}"
             prescripciones[key] = {
                 "codigo": codigo,
@@ -294,6 +333,9 @@ class KairosOptimizer:
                 "score": score,
                 "desbloquea": cascada,
                 "estudiantes_demandantes": est_list,
+                "aula": aula,
+                "docente": docente,
+                "bajo_cupo": bajo_cupo,
             }
 
         prescripciones = dict(

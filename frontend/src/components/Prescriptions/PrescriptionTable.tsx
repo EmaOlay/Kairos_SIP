@@ -11,6 +11,9 @@ interface Prescription {
   demanda: number;
   score: number;
   desbloquea: number;
+  aula?: string;
+  docente?: string;
+  bajo_cupo?: boolean;
 }
 
 interface PrescriptionTableProps {
@@ -50,6 +53,8 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
               <th title="Posición en el ranking ordenado por score">#</th>
               <th title="Nombre de la asignatura del plan de estudio">Materia</th>
               <th title="Turno de la comisión: Mañana ($3000), Tarde ($4000), Noche ($6000)">Turno</th>
+              <th title="Aula asignada para el dictado">Aula</th>
+              <th title="Docente requerido o asignado">Profesor</th>
               <th title="Lo que la facultad cobra por alumno inscripto en este turno">Ingreso/alumno</th>
               <th title="Puntaje calculado por el motor. Pasá el mouse sobre cada celda de score para ver la fórmula detallada">Score</th>
               <th title="Cantidad de alumnos que necesitan esta materia y prefieren este turno">Demanda</th>
@@ -59,23 +64,37 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => (
-              <tr key={`${item.codigo}_${item.turno}`}>
-                <td className={styles.rank}>{idx + 1}</td>
-                <td className={styles.name}>{item.nombre}</td>
-                <td className={styles.turno}>{turnoLabel[item.turno] || item.turno}</td>
-                <td className={styles.costo}>${item.ingreso_por_alumno?.toLocaleString()}</td>
-                <td className={styles.score} title={buildScoreTooltip(item)}>{item.score?.toFixed(1)}</td>
-                <td className={styles.demand}>{item.demanda}</td>
-                <td className={styles.demand}>{item.desbloquea}</td>
-                <td>
-                  <span className={`${styles.badge} ${item.decision === 'ABRIR' ? styles.abrir : styles.noAbrir}`}>
-                    {item.decision}
-                  </span>
-                </td>
-                <td className={styles.reason}>{item.razon}</td>
-              </tr>
-            ))}
+            {items.map((item, idx) => {
+              const showRisk = item.bajo_cupo && item.decision === 'ABRIR';
+              return (
+                <tr key={`${item.codigo}_${item.turno}`} className={showRisk ? styles.riskRow : ''}>
+                  <td className={styles.rank}>{idx + 1}</td>
+                  <td className={styles.name}>{item.nombre}</td>
+                  <td className={styles.turno}>{turnoLabel[item.turno] || item.turno}</td>
+                  <td className={styles.turno}>{item.aula || '-'}</td>
+                  <td className={styles.name}>{item.docente || '-'}</td>
+                  <td className={styles.costo}>${item.ingreso_por_alumno?.toLocaleString()}</td>
+                  <td className={styles.score} title={buildScoreTooltip(item)}>{item.score?.toFixed(1)}</td>
+                  <td className={styles.demand}>
+                    <div className={styles.bajoCupoRow}>
+                      {item.demanda}
+                      {showRisk && (
+                        <span className={styles.bajoCupoBadge} title="Bajo cupo proyectado. Menos de 15 alumnos.">
+                          ⚠️ Riesgo
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className={styles.demand}>{item.desbloquea}</td>
+                  <td>
+                    <span className={`${styles.badge} ${item.decision === 'ABRIR' ? styles.abrir : styles.noAbrir}`}>
+                      {item.decision}
+                    </span>
+                  </td>
+                  <td className={styles.reason}>{item.razon}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

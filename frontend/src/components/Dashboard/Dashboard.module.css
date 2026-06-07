@@ -385,3 +385,56 @@
   height: calc(100vh - 360px);
   min-height: 600px;
 }
+
+.exportSection {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.exportExcelBtn {
+  background: linear-gradient(135deg, #107c41, #159b52);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(16, 124, 65, 0.15);
+}
+
+.exportExcelBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(16, 124, 65, 0.25);
+  filter: brightness(1.05);
+}
+
+.exportPdfBtn {
+  background: linear-gradient(135deg, #c2185b, #e91e63);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(194, 24, 91, 0.15);
+}
+
+.exportPdfBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(194, 24, 91, 0.25);
+  filter: brightness(1.05);
+}
+
