@@ -6,6 +6,7 @@ y permiten correr el motor sin que el front mande JSON gigantes.
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,7 +17,7 @@ from kairos.api.deps import get_db
 from kairos.api.schemas.optimizer import ResponsePrescripcion
 from kairos.core.optimizer import KairosOptimizer
 from kairos.db.models import PlanORM
-from kairos.db.repository import EstudianteRepository, PlanRepository
+from kairos.db.repository import EstudianteRepository, PlanRepository, RecursoRepository
 from kairos.schemas.data_models import (
     ConfiguracionKairos,
     EstudianteTrayectoria,
@@ -156,6 +157,11 @@ def procesar_desde_db(
     for est in estudiantes:
         optimizer.agregar_estudiante(est)
 
+    # Cargar recursos desde la DB para enriquecer las comisiones
+    recursos = RecursoRepository(db).list_all()
+    if recursos:
+        optimizer.agregar_recursos(recursos)
+
     bardo_plan = optimizer.validar_caminos()
     if any("ciclos" in p.lower() for p in bardo_plan):
         raise HTTPException(
@@ -183,4 +189,195 @@ def procesar_desde_db(
             "max_cupos_por_comision": config_efectiva.max_cupos_por_comision,
             "max_comisiones_a_abrir": config_efectiva.max_comisiones_a_abrir,
         },
+    )
+
+
+@router.post("/planes/{codigo_plan}/export/excel")
+def exportar_excel(
+    codigo_plan: str,
+    request: ProcessFromDbRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Corre la optimización y exporta la propuesta definitiva de comisiones a un archivo Excel
+    con detalles de aulas, profesores y marcado de comisiones con bajo cupo (riesgo).
+    """
+    plan = PlanRepository(db).get(codigo_plan)
+    if plan is None:
+        raise HTTPException(status_code=404, detail=f"Plan {codigo_plan} no existe")
+
+    estudiantes = EstudianteRepository(db).list_by_plan(codigo_plan)
+
+    optimizer = KairosOptimizer(plan, request.config)
+    for est in estudiantes:
+        optimizer.agregar_estudiante(est)
+
+    recursos = RecursoRepository(db).list_all()
+    if recursos:
+        optimizer.agregar_recursos(recursos)
+
+    bardo_plan = optimizer.validar_caminos()
+    if any("ciclos" in p.lower() for p in bardo_plan):
+        raise HTTPException(
+            status_code=400,
+            detail=f"El plan de estudio tiene ciclos: {bardo_plan}",
+        )
+
+    prescripciones = optimizer.prescribir_aperturas()
+
+    # Filtrar solo comisiones que se recomienda ABRIR
+    comisiones_abrir = [
+        p for p in prescripciones.values() if p["decision"] == "ABRIR"
+    ]
+
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    import io
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Propuesta Oferta Académica"
+
+    # Estilos de diseño premium
+    font_title = Font(name="Segoe UI", size=16, bold=True, color="1F4E79")
+    font_subtitle = Font(name="Segoe UI", size=10, italic=True, color="595959")
+    font_header = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+    font_data = Font(name="Segoe UI", size=10)
+    font_risk = Font(name="Segoe UI", size=10, bold=True, color="C00000")
+
+    fill_header = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid") # Azul oscuro
+    fill_risk = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid") # Naranja/Amarillo muy claro
+    fill_zebra = PatternFill(start_color="F9FBFD", end_color="F9FBFD", fill_type="solid") # Azul grisáceo levísimo
+    fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+    border_thin = Border(
+        left=Side(style='thin', color='D9D9D9'),
+        right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'),
+        bottom=Side(style='thin', color='D9D9D9')
+    )
+
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center")
+    align_right = Alignment(horizontal="right", vertical="center")
+
+    # Fila 1: Vacía
+    ws.append([])
+
+    # Fila 2: Título principal
+    ws.cell(row=2, column=2, value="KAIROS — Propuesta Definitiva de Oferta Académica").font = font_title
+    ws.row_dimensions[2].height = 25
+
+    # Fila 3: Información de Carrera
+    ws.cell(row=3, column=2, value=f"Carrera: {plan.nombre_carrera} (Plan {plan.codigo_plan})").font = font_subtitle
+    ws.row_dimensions[3].height = 18
+
+    # Fila 4: Configuración del Motor Usada
+    config_efectiva = request.config or ConfiguracionKairos()
+    config_desc = (
+        f"Configuración activa: Peso Cascada: {int(config_efectiva.weight_tasa_graduacion * 100)}% | "
+        f"Peso Rentabilidad: {int(config_efectiva.weight_eficiencia_operativa * 100)}% | "
+        f"Score Mínimo: {config_efectiva.min_tasa_ocupacion * 10:.1f} | "
+        f"Tope comisiones: {config_efectiva.max_comisiones_a_abrir or 'Sin límite'}"
+    )
+    ws.cell(row=4, column=2, value=config_desc).font = font_subtitle
+    ws.row_dimensions[4].height = 18
+
+    # Fila 5: Vacía
+    ws.append([])
+
+    # Encabezados de tabla (Fila 6)
+    headers = [
+        "Materia Código",
+        "Nombre Materia",
+        "Turno",
+        "Aula Asignada",
+        "Profesor Requerido",
+        "Demanda Proyectada",
+        "Score Prescriptivo",
+        "Estado / Alerta"
+    ]
+
+    header_row = 6
+    ws.row_dimensions[header_row].height = 28
+    for col_idx, h_text in enumerate(headers, start=2):
+        cell = ws.cell(row=header_row, column=col_idx, value=h_text)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+        cell.border = border_thin
+
+    # Agregar filas de datos (a partir de la fila 7)
+    row_idx = 7
+    turno_map = {"manana": "Mañana", "tarde": "Tarde", "noche": "Noche"}
+
+    for item in comisiones_abrir:
+        estado_text = "⚠️ Riesgo de baja inscripción" if item["bajo_cupo"] else "Normal"
+        
+        c_cod = ws.cell(row=row_idx, column=2, value=item["codigo"])
+        c_cod.alignment = align_center
+        
+        c_nom = ws.cell(row=row_idx, column=3, value=item["nombre"])
+        c_nom.alignment = align_left
+        
+        c_tur = ws.cell(row=row_idx, column=4, value=turno_map.get(item["turno"], item["turno"]))
+        c_tur.alignment = align_center
+        
+        c_aul = ws.cell(row=row_idx, column=5, value=item["aula"])
+        c_aul.alignment = align_center
+        
+        c_doc = ws.cell(row=row_idx, column=6, value=item["docente"])
+        c_doc.alignment = align_left
+        
+        c_dem = ws.cell(row=row_idx, column=7, value=item["demanda"])
+        c_dem.alignment = align_right
+        
+        c_sco = ws.cell(row=row_idx, column=8, value=item["score"])
+        c_sco.alignment = align_right
+        
+        c_est = ws.cell(row=row_idx, column=9, value=estado_text)
+        c_est.alignment = align_center
+
+        # Aplicar estilos y formatos por celda
+        ws.row_dimensions[row_idx].height = 20
+        is_even = (row_idx % 2 == 0)
+        row_fill = fill_risk if item["bajo_cupo"] else (fill_zebra if is_even else fill_white)
+
+        for col in range(2, 10):
+            c = ws.cell(row=row_idx, column=col)
+            c.font = font_data
+            c.fill = row_fill
+            c.border = border_thin
+            if item["bajo_cupo"]:
+                if col in (7, 9): # Destacar en rojo la demanda y el estado
+                    c.font = font_risk
+
+        row_idx += 1
+
+    # Auto-ajustar el ancho de las columnas para que no se corte el texto
+    for col in range(2, 10):
+        col_letter = get_column_letter(col)
+        max_len = 0
+        for row in range(6, row_idx):
+            val = ws.cell(row=row, column=col).value
+            if val is not None:
+                max_len = max(max_len, len(str(val)))
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 13)
+
+    # Ajustes finos de columnas específicas
+    ws.column_dimensions['A'].width = 3
+    ws.column_dimensions['C'].width = 32 # Nombre materia
+    ws.column_dimensions['F'].width = 24 # Profesor
+    ws.column_dimensions['I'].width = 25 # Estado/Alerta
+
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"propuesta_oferta_{codigo_plan}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )

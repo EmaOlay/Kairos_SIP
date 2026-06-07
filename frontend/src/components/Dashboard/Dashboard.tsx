@@ -213,6 +213,236 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!selectedPlanCode) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/planes/${encodeURIComponent(selectedPlanCode)}/export/excel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ config }),
+      });
+      if (!response.ok) {
+        throw new Error('Error al generar la propuesta de Excel.');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `propuesta_oferta_${selectedPlanCode}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message || 'Error exportando propuesta a Excel');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportPdf = () => {
+    if (!results || !plan) return;
+
+    const items = Object.values(results.prescripciones)
+      .filter((p: any) => p.decision === 'ABRIR')
+      .sort((a: any, b: any) => b.score - a.score);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Por favor, permita las ventanas emergentes para exportar a PDF.');
+      return;
+    }
+
+    const configDesc = `Cascada: ${(config.weight_tasa_graduacion * 100).toFixed(0)}% | ` +
+      `Rentabilidad: ${(config.weight_eficiencia_operativa * 100).toFixed(0)}% | ` +
+      `Score mínimo: ${(config.min_tasa_ocupacion * 10).toFixed(1)} | ` +
+      `Tope comisiones: ${config.max_comisiones_a_abrir ?? 'Sin límite'}`;
+
+    const dateStr = new Date().toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const rowsHtml = items.map((item: any, idx: number) => {
+      const isRisk = item.bajo_cupo;
+      const rowStyle = isRisk ? 'background-color: #fff8e1; color: #b78103;' : '';
+      const badgeHtml = isRisk ? '<span class="warning-badge">⚠️ Riesgo de baja</span>' : 'Normal';
+      const turnoLabel: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
+      
+      return `
+        <tr style="${rowStyle}">
+          <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
+          <td><strong>${item.codigo}</strong></td>
+          <td>${item.nombre}</td>
+          <td style="text-align: center;">${turnoLabel[item.turno] || item.turno}</td>
+          <td style="text-align: center;">${item.aula || '-'}</td>
+          <td>${item.docente || '-'}</td>
+          <td style="text-align: right; font-weight: bold;">${item.demanda}</td>
+          <td style="text-align: right;">${item.score.toFixed(1)}</td>
+          <td style="text-align: center;">${badgeHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Oferta Académica - ${plan.nombre_carrera}</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Inter, Roboto, sans-serif;
+            margin: 30px;
+            color: #333;
+            background-color: #fff;
+          }
+          .header {
+            border-bottom: 3px solid #1f4e79;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f4e79;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+          }
+          .subtitle {
+            font-size: 14px;
+            color: #555;
+            margin: 0;
+          }
+          .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin-bottom: 25px;
+            font-size: 13px;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+          }
+          .meta-item {
+            margin: 4px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            font-size: 12px;
+            page-break-inside: auto;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          th {
+            background-color: #1f4e79;
+            color: #fff;
+            font-weight: bold;
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            font-size: 11px;
+            text-transform: uppercase;
+          }
+          td {
+            padding: 8px;
+            border: 1px solid #ddd;
+          }
+          tr:nth-child(even) {
+            background-color: #f9fbfd;
+          }
+          .warning-badge {
+            background-color: #ffe082;
+            color: #e65100;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .signatures {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+          }
+          .signature-box {
+            width: 40%;
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+          }
+          @media print {
+            body { margin: 15px; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 class="title">KAIROS — Propuesta Definitiva de Oferta Académica</h1>
+          <p class="subtitle">Reporte Oficial de Oferta y Planificación de Comisiones</p>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-item"><strong>Carrera:</strong> ${plan.nombre_carrera} (Plan: ${plan.codigo_plan})</div>
+          <div class="meta-item" style="text-align: right;"><strong>Fecha de Emisión:</strong> ${dateStr}</div>
+          <div class="meta-item" style="grid-column: span 2;"><strong>Parámetros de Simulación:</strong> ${configDesc}</div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 4%;">#</th>
+              <th style="width: 12%;">Código</th>
+              <th style="width: 25%;">Asignatura</th>
+              <th style="width: 10%;">Turno</th>
+              <th style="width: 10%;">Aula</th>
+              <th style="width: 20%;">Docente Requerido</th>
+              <th style="width: 8%;">Demanda</th>
+              <th style="width: 6%;">Score</th>
+              <th style="width: 15%;">Estado / Riesgo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="signatures">
+          <div class="signature-box">
+            Firma: Bedelía
+          </div>
+          <div class="signature-box">
+            Firma: Gestor Institucional
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
@@ -381,6 +611,15 @@ const Dashboard: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className={styles.exportSection}>
+                  <button className={styles.exportExcelBtn} onClick={handleExportExcel} disabled={loading}>
+                    📊 Exportar propuesta a Excel
+                  </button>
+                  <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
+                    📄 Exportar propuesta a PDF (Imprimir)
+                  </button>
                 </div>
 
                 <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
