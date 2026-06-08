@@ -3,6 +3,8 @@ import { kairosService } from '../../services/kairosService';
 import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
+import ComparativeReportView from '../Reports/ComparativeReportView';
+import ThemeToggle from './ThemeToggle';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
@@ -12,7 +14,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria'>('resultados');
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +185,52 @@ const Dashboard: React.FC = () => {
       setIngestBusy(false);
     }
   };
+
+  const handleListUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    opts: {
+      tipo: string; // etiqueta para mensajes ("aulas", "docentes")
+      idKey: string; // campo identificador para el conteo
+      ingest: (data: any[]) => Promise<{ persistidos: number; rechazados: number; errores: string[] }>;
+    }
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setError(null);
+    setInfo(null);
+    setIngestBusy(true);
+    try {
+      const data = await readJsonFile(file);
+      if (!Array.isArray(data)) {
+        throw new Error(`El JSON debe ser una lista de ${opts.tipo}`);
+      }
+      const mensaje =
+        `Vas a ingestar ${data.length} ${opts.tipo} del archivo "${file.name}".\n\n` +
+        `Los que ya existan (mismo ${opts.idKey}) serán reemplazados.\n\n¿Confirmar?`;
+      if (!window.confirm(mensaje)) {
+        setIngestBusy(false);
+        return;
+      }
+      const res = await opts.ingest(data);
+      let msg = `${opts.tipo[0].toUpperCase()}${opts.tipo.slice(1)} persistidos: ${res.persistidos} (rechazados: ${res.rechazados}).`;
+      if (res.errores.length > 0) {
+        msg += ` Detalles: ${res.errores.slice(0, 3).join('; ')}${res.errores.length > 3 ? '…' : ''}`;
+      }
+      setInfo(msg);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIngestBusy(false);
+    }
+  };
+
+  const handleAulasUpload = (e: React.ChangeEvent<HTMLInputElement>) =>
+    handleListUpload(e, { tipo: 'aulas', idKey: 'aula_id', ingest: kairosService.ingestarAulas });
+
+  const handleDocentesUpload = (e: React.ChangeEvent<HTMLInputElement>) =>
+    handleListUpload(e, { tipo: 'docentes', idKey: 'docente_id', ingest: kairosService.ingestarDocentes });
 
   const handleWeightChange = (graduacion: number) => {
     setConfig(prev => ({
@@ -448,6 +496,7 @@ const Dashboard: React.FC = () => {
       <header className={styles.header}>
         <h1 className={styles.logo}>KAIROS <span className={styles.tag}>ENGINE</span></h1>
         <div className={styles.controls}>
+          <ThemeToggle />
           <select
             className={styles.planSelect}
             value={selectedPlanCode}
@@ -496,6 +545,26 @@ const Dashboard: React.FC = () => {
               type="file"
               accept=".json,application/json"
               onChange={handleEstudiantesUpload}
+              disabled={ingestBusy}
+              hidden
+            />
+          </label>
+          <label className={styles.uploadBtn}>
+            {ingestBusy ? 'Procesando…' : 'Importar Aulas (JSON)'}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleAulasUpload}
+              disabled={ingestBusy}
+              hidden
+            />
+          </label>
+          <label className={styles.uploadBtn}>
+            {ingestBusy ? 'Procesando…' : 'Importar Docentes (JSON)'}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleDocentesUpload}
               disabled={ingestBusy}
               hidden
             />
@@ -559,84 +628,96 @@ const Dashboard: React.FC = () => {
       </section>
 
       <main className={styles.content}>
-        {results ? (
-          <>
-            <div className={styles.tabs} role="tablist">
-              <button
-                role="tab"
-                aria-selected={activeTab === 'resultados'}
-                className={`${styles.tab} ${activeTab === 'resultados' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('resultados')}
-              >
-                Resultados
-              </button>
-              <button
-                role="tab"
-                aria-selected={activeTab === 'grafo'}
-                className={`${styles.tab} ${activeTab === 'grafo' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('grafo')}
-                disabled={!graphData}
-              >
-                Mapa de Correlatividades
-              </button>
-            </div>
+        <div className={styles.tabs} role="tablist">
+          <button
+            role="tab"
+            aria-selected={activeTab === 'resultados'}
+            className={`${styles.tab} ${activeTab === 'resultados' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('resultados')}
+          >
+            Resultados
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'grafo'}
+            className={`${styles.tab} ${activeTab === 'grafo' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('grafo')}
+            disabled={!graphData}
+          >
+            Mapa de Correlatividades
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'reporteria'}
+            className={`${styles.tab} ${activeTab === 'reporteria' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('reporteria')}
+            disabled={!plan}
+            title={!plan ? 'Seleccioná un plan primero' : 'Comparar escenarios'}
+          >
+            Reportería Comparativa
+          </button>
+        </div>
 
-            {activeTab === 'resultados' && (
-              <>
-                <section className={styles.stats}>
-                  <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
-                    <span className={styles.statLabel}>Demanda Total</span>
-                    <span className={styles.statValue}>{results.demanda_total}</span>
-                  </div>
-                  <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
-                    <span className={styles.statLabel}>Materias a Abrir</span>
-                    <span className={styles.statValue}>
-                      {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
-                    </span>
-                  </div>
-                  <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
-                    <span className={styles.statLabel}>Cuellos de Botella</span>
-                    <span className={styles.statValue}>{results.cuellos_botella.length}</span>
-                  </div>
-                </section>
-
-                <div className={styles.bottlenecks}>
-                  <h3 className={styles.subTitle}>Materias Críticas</h3>
-                  <div className={styles.bottleneckGrid}>
-                    {results.cuellos_botella.map((c: any) => (
-                      <div key={c.codigo} className={styles.bottleneckItem}>
-                        <span className={styles.bCode}>{c.codigo}</span>
-                        <span className={styles.bName}>{c.nombre}</span>
-                        <span className={styles.bLevel}>{c.criticidad}</span>
-                      </div>
-                    ))}
-                  </div>
+        {activeTab === 'resultados' && (
+          results ? (
+            <>
+              <section className={styles.stats}>
+                <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
+                  <span className={styles.statLabel}>Demanda Total</span>
+                  <span className={styles.statValue}>{results.demanda_total}</span>
                 </div>
-
-                <div className={styles.exportSection}>
-                  <button className={styles.exportExcelBtn} onClick={handleExportExcel} disabled={loading}>
-                    📊 Exportar propuesta a Excel
-                  </button>
-                  <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
-                    📄 Exportar propuesta a PDF (Imprimir)
-                  </button>
+                <div className={styles.statCard} title="Cantidad de comisiones (materia+turno) que el motor recomienda abrir con los parámetros actuales.">
+                  <span className={styles.statLabel}>Materias a Abrir</span>
+                  <span className={styles.statValue}>
+                    {Object.values(results.prescripciones).filter((p: any) => p.decision === 'ABRIR').length}
+                  </span>
                 </div>
+                <div className={styles.statCard} title="Materias que si no se abren, traban a muchos alumnos porque tienen muchas materias que dependen de ellas.">
+                  <span className={styles.statLabel}>Cuellos de Botella</span>
+                  <span className={styles.statValue}>{results.cuellos_botella.length}</span>
+                </div>
+              </section>
 
-                <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
-              </>
-            )}
-
-            {activeTab === 'grafo' && graphData && (
-              <div className={styles.graphFull}>
-                <GraphViewer data={graphData} />
+              <div className={styles.bottlenecks}>
+                <h3 className={styles.subTitle}>Materias Críticas</h3>
+                <div className={styles.bottleneckGrid}>
+                  {results.cuellos_botella.map((c: any) => (
+                    <div key={c.codigo} className={styles.bottleneckItem}>
+                      <span className={styles.bCode}>{c.codigo}</span>
+                      <span className={styles.bName}>{c.nombre}</span>
+                      <span className={styles.bLevel}>{c.criticidad}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </>
-        ) : (
-          <div className={styles.empty}>
-            <h2>Listo para optimizar.</h2>
-            <p>{bootstrapping ? 'Cargando datos desde la DB…' : 'Dale al botón de "Prender Motor".'}</p>
+
+              <div className={styles.exportSection}>
+                <button className={styles.exportExcelBtn} onClick={handleExportExcel} disabled={loading}>
+                  📊 Exportar propuesta a Excel
+                </button>
+                <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
+                  📄 Exportar propuesta a PDF (Imprimir)
+                </button>
+              </div>
+
+              <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
+            </>
+          ) : (
+            <div className={styles.empty}>
+              <h2>Listo para optimizar.</h2>
+              <p>{bootstrapping ? 'Cargando datos desde la DB…' : 'Dale al botón de "Prender Motor".'}</p>
+            </div>
+          )
+        )}
+
+        {activeTab === 'grafo' && graphData && (
+          <div className={styles.graphFull}>
+            <GraphViewer data={graphData} />
           </div>
+        )}
+
+        {activeTab === 'reporteria' && selectedPlanCode && (
+          <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
       </main>
     </div>

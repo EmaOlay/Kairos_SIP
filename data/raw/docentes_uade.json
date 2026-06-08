@@ -1,0 +1,526 @@
+[
+  {
+    "docente_id": "DOC001",
+    "nombre": "Mg. Lucas Diaz",
+    "materias_que_dicta": [
+      "2.1.002",
+      "3.1.050",
+      "3.4.043"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC002",
+    "nombre": "Mg. Lucas Martinez",
+    "materias_que_dicta": [
+      "3.1.050",
+      "3.4.043",
+      "3.4.069"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC003",
+    "nombre": "Dra. Patricia Perez",
+    "materias_que_dicta": [
+      "3.4.043",
+      "3.4.069",
+      "3.4.164"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC004",
+    "nombre": "Dr. Carolina Rossi",
+    "materias_que_dicta": [
+      "3.4.164",
+      "3.1.024",
+      "3.1.051"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC005",
+    "nombre": "Mg. Hernan Alvarez",
+    "materias_que_dicta": [
+      "3.1.024",
+      "3.1.051",
+      "3.2.178"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC006",
+    "nombre": "Dra. Patricia Ibarra",
+    "materias_que_dicta": [
+      "3.2.178",
+      "3.3.121",
+      "3.4.071"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC007",
+    "nombre": "Dra. Patricia Gomez",
+    "materias_que_dicta": [
+      "3.3.121",
+      "3.4.071",
+      "3.4.072"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC008",
+    "nombre": "Lic. Ana Rossi",
+    "materias_que_dicta": [
+      "3.4.071",
+      "3.4.072",
+      "3.1.052"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC009",
+    "nombre": "Dra. Pablo Lopez",
+    "materias_que_dicta": [
+      "3.1.052",
+      "3.1.053",
+      "3.4.074"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC010",
+    "nombre": "Mg. Hernan Alvarez",
+    "materias_que_dicta": [
+      "3.1.053",
+      "3.4.074",
+      "3.4.075"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC011",
+    "nombre": "Dra. Elena Martinez",
+    "materias_que_dicta": [
+      "3.4.075",
+      "3.4.207",
+      "3.1.054"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC012",
+    "nombre": "Mg. Hernan Rossi",
+    "materias_que_dicta": [
+      "3.4.207",
+      "3.1.054",
+      "3.4.077"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC013",
+    "nombre": "Lic. Ricardo Gonzalez",
+    "materias_que_dicta": [
+      "3.1.054",
+      "3.4.077",
+      "3.4.078"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC014",
+    "nombre": "Dr. Gabriel Perez",
+    "materias_que_dicta": [
+      "3.4.078",
+      "3.4.208",
+      "3.4.209"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC015",
+    "nombre": "Lic. Diego Fernandez",
+    "materias_que_dicta": [
+      "3.4.208",
+      "3.4.209",
+      "2.4.216"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC016",
+    "nombre": "Dr. Carlos Nunez",
+    "materias_que_dicta": [
+      "2.4.216",
+      "3.1.049",
+      "3.4.210"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC017",
+    "nombre": "Lic. Ricardo Sanchez",
+    "materias_que_dicta": [
+      "3.1.049",
+      "3.4.210",
+      "3.4.211"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC018",
+    "nombre": "Mg. Lucas Ferraro",
+    "materias_que_dicta": [
+      "3.4.210",
+      "3.4.211",
+      "3.4.212"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC019",
+    "nombre": "Dr. Carlos Perez",
+    "materias_que_dicta": [
+      "3.4.212",
+      "3.4.213",
+      "3.1.055"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC020",
+    "nombre": "Dra. Jorge Fernandez",
+    "materias_que_dicta": [
+      "3.4.213",
+      "3.1.055",
+      "3.1.056"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC021",
+    "nombre": "Ing. Maria Gomez",
+    "materias_que_dicta": [
+      "3.1.056",
+      "3.4.082",
+      "3.4.214"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC022",
+    "nombre": "Lic. Ricardo Nunez",
+    "materias_que_dicta": [
+      "3.4.082",
+      "3.4.214",
+      "3.4.215"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC023",
+    "nombre": "Dra. Patricia Romano",
+    "materias_que_dicta": [
+      "3.4.214",
+      "3.4.215",
+      "3.1.025"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC024",
+    "nombre": "Dra. Jorge Romano",
+    "materias_que_dicta": [
+      "3.1.025",
+      "3.4.089",
+      "3.4.092"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC025",
+    "nombre": "Ing. Maria Gomez",
+    "materias_que_dicta": [
+      "3.4.089",
+      "3.4.092",
+      "3.4.216"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC026",
+    "nombre": "Dra. Elena Gomez",
+    "materias_que_dicta": [
+      "3.4.216",
+      "3.4.217",
+      "1"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC027",
+    "nombre": "Lic. Ana Gomez",
+    "materias_que_dicta": [
+      "3.4.217",
+      "1",
+      "3.4.086"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC028",
+    "nombre": "Dr. Carolina Gomez",
+    "materias_que_dicta": [
+      "1",
+      "3.4.086",
+      "3.4.096"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC029",
+    "nombre": "Ing. Florencia Diaz",
+    "materias_que_dicta": [
+      "3.4.096",
+      "3.4.218",
+      "3.4.219"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC030",
+    "nombre": "Lic. Diego Ferraro",
+    "materias_que_dicta": [
+      "3.4.218",
+      "3.4.219",
+      "PPS06"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC031",
+    "nombre": "Dra. Patricia Martinez",
+    "materias_que_dicta": [
+      "PPS06",
+      "2",
+      "3.4.094"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC032",
+    "nombre": "Lic. Valeria Nunez",
+    "materias_que_dicta": [
+      "2",
+      "3.4.094",
+      "3.4.098"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC033",
+    "nombre": "Dra. Elena Alvarez",
+    "materias_que_dicta": [
+      "3.4.094",
+      "3.4.098",
+      "3.4.100"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  },
+  {
+    "docente_id": "DOC034",
+    "nombre": "Dra. Jorge Acosta",
+    "materias_que_dicta": [
+      "3.4.100",
+      "3.4.220",
+      "2.3.056"
+    ],
+    "disponibilidad_turnos": [
+      "manana",
+      "tarde"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC035",
+    "nombre": "Ing. Maria Bianchi",
+    "materias_que_dicta": [
+      "3.4.220",
+      "2.3.056",
+      "3"
+    ],
+    "disponibilidad_turnos": [
+      "tarde",
+      "noche"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC036",
+    "nombre": "Mg. Natalia Acosta",
+    "materias_que_dicta": [
+      "3",
+      "3.4.135",
+      "3.4.221"
+    ],
+    "disponibilidad_turnos": [
+      "noche",
+      "manana"
+    ],
+    "max_comisiones": 4,
+    "horario_fehaciente": true
+  },
+  {
+    "docente_id": "DOC037",
+    "nombre": "Mg. Lucas Lopez",
+    "materias_que_dicta": [
+      "3.4.135",
+      "3.4.221"
+    ],
+    "disponibilidad_turnos": [],
+    "max_comisiones": 3,
+    "horario_fehaciente": false
+  }
+]

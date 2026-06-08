@@ -12,16 +12,22 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from kairos.db.models import (
+    AulaORM,
     CorrelativaORM,
+    DocenteORM,
     EstudianteORM,
+    HistoricoDictadoORM,
     MateriaORM,
     PlanORM,
     RecursoORM,
     RegistroTrayectoriaORM,
 )
 from kairos.schemas.data_models import (
+    Aula,
+    Docente,
     EstadoMateria,
     EstudianteTrayectoria,
+    HistoricoDictado,
     Materia,
     PlanEstudio,
     RecursoDisponible,
@@ -283,4 +289,130 @@ class RecursoRepository:
             docente_nombre=r.docente_nombre,
             costo_operativo_base=r.costo_operativo_base,
             costo_por_alumno=r.costo_por_alumno,
+        )
+
+
+class AulaRepository:
+    """Persistencia de aulas (capacidad y cantidad)."""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def upsert(self, aula: Aula) -> None:
+        existente = self.session.get(AulaORM, aula.aula_id)
+        if existente is not None:
+            self.session.delete(existente)
+            self.session.flush()
+
+        self.session.add(
+            AulaORM(
+                aula_id=aula.aula_id,
+                nombre=aula.nombre,
+                capacidad=aula.capacidad,
+                sede=aula.sede,
+                turnos_disponibles_json=_dump_json(aula.turnos_disponibles),
+            )
+        )
+        self.session.commit()
+
+    def list_all(self) -> List[Aula]:
+        rows = self.session.execute(select(AulaORM)).scalars().all()
+        return [self._to_pydantic(a) for a in rows]
+
+    @staticmethod
+    def _to_pydantic(a: AulaORM) -> Aula:
+        return Aula(
+            aula_id=a.aula_id,
+            nombre=a.nombre,
+            capacidad=a.capacidad,
+            sede=a.sede,
+            turnos_disponibles=_load_json(
+                a.turnos_disponibles_json, ["manana", "tarde", "noche"]
+            ),
+        )
+
+
+class DocenteRepository:
+    """Persistencia de docentes (materias dictables + disponibilidad)."""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def upsert(self, docente: Docente) -> None:
+        existente = self.session.get(DocenteORM, docente.docente_id)
+        if existente is not None:
+            self.session.delete(existente)
+            self.session.flush()
+
+        self.session.add(
+            DocenteORM(
+                docente_id=docente.docente_id,
+                nombre=docente.nombre,
+                materias_que_dicta_json=_dump_json(docente.materias_que_dicta),
+                disponibilidad_turnos_json=_dump_json(docente.disponibilidad_turnos),
+                max_comisiones=docente.max_comisiones,
+                horario_fehaciente=docente.horario_fehaciente,
+            )
+        )
+        self.session.commit()
+
+    def list_all(self) -> List[Docente]:
+        rows = self.session.execute(select(DocenteORM)).scalars().all()
+        return [self._to_pydantic(d) for d in rows]
+
+    @staticmethod
+    def _to_pydantic(d: DocenteORM) -> Docente:
+        return Docente(
+            docente_id=d.docente_id,
+            nombre=d.nombre,
+            materias_que_dicta=_load_json(d.materias_que_dicta_json, []),
+            disponibilidad_turnos=_load_json(d.disponibilidad_turnos_json, []),
+            max_comisiones=d.max_comisiones,
+            horario_fehaciente=bool(d.horario_fehaciente),
+        )
+
+
+class HistoricoRepository:
+    """Persistencia del historico de dictado (insumo de estimacion)."""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def upsert(self, registro: HistoricoDictado) -> None:
+        existente = self.session.get(HistoricoDictadoORM, registro.historico_id)
+        if existente is not None:
+            self.session.delete(existente)
+            self.session.flush()
+
+        self.session.add(
+            HistoricoDictadoORM(
+                historico_id=registro.historico_id,
+                docente_id=registro.docente_id,
+                docente_nombre=registro.docente_nombre,
+                codigo_materia=registro.codigo_materia,
+                nombre_materia=registro.nombre_materia,
+                turno=registro.turno,
+                ano=registro.ano,
+                cuatrimestre=registro.cuatrimestre,
+                cantidad_alumnos=registro.cantidad_alumnos,
+            )
+        )
+        self.session.commit()
+
+    def list_all(self) -> List[HistoricoDictado]:
+        rows = self.session.execute(select(HistoricoDictadoORM)).scalars().all()
+        return [self._to_pydantic(h) for h in rows]
+
+    @staticmethod
+    def _to_pydantic(h: HistoricoDictadoORM) -> HistoricoDictado:
+        return HistoricoDictado(
+            historico_id=h.historico_id,
+            docente_id=h.docente_id,
+            docente_nombre=h.docente_nombre,
+            codigo_materia=h.codigo_materia,
+            nombre_materia=h.nombre_materia,
+            turno=h.turno,
+            ano=h.ano,
+            cuatrimestre=h.cuatrimestre,
+            cantidad_alumnos=h.cantidad_alumnos,
         )

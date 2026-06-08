@@ -14,17 +14,77 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from kairos.api.deps import get_db
-from kairos.api.schemas.optimizer import ResponsePrescripcion
+from kairos.api.schemas.optimizer import (
+    EscenarioReporte,
+    RequestReporteComparativo,
+    ResponsePrescripcion,
+    ResponseReporteComparativo,
+)
 from kairos.core.optimizer import KairosOptimizer
 from kairos.db.models import PlanORM
-from kairos.db.repository import EstudianteRepository, PlanRepository, RecursoRepository
+from kairos.db.repository import (
+    AulaRepository,
+    DocenteRepository,
+    EstudianteRepository,
+    HistoricoRepository,
+    PlanRepository,
+    RecursoRepository,
+)
 from kairos.schemas.data_models import (
+    Aula,
     ConfiguracionKairos,
+    Docente,
     EstudianteTrayectoria,
     PlanEstudio,
 )
 
 router = APIRouter()
+
+
+def _construir_optimizer(
+    db: Session,
+    codigo_plan: str,
+    config: Optional[ConfiguracionKairos],
+) -> KairosOptimizer:
+    """
+    Levanta plan + estudiantes + recursos operativos (comisiones, aulas,
+    docentes, histórico) de la DB y arma un KairosOptimizer listo para correr.
+
+    Lanza HTTPException 404 si el plan no existe y 400 si el plan tiene ciclos.
+    Centraliza la carga para que /process, /export y /reportes usen lo mismo.
+    """
+    plan = PlanRepository(db).get(codigo_plan)
+    if plan is None:
+        raise HTTPException(status_code=404, detail=f"Plan {codigo_plan} no existe")
+
+    optimizer = KairosOptimizer(plan, config)
+    for est in EstudianteRepository(db).list_by_plan(codigo_plan):
+        optimizer.agregar_estudiante(est)
+
+    recursos = RecursoRepository(db).list_all()
+    if recursos:
+        optimizer.agregar_recursos(recursos)
+
+    aulas = AulaRepository(db).list_all()
+    if aulas:
+        optimizer.agregar_aulas(aulas)
+
+    docentes = DocenteRepository(db).list_all()
+    if docentes:
+        optimizer.agregar_docentes(docentes)
+
+    historico = HistoricoRepository(db).list_all()
+    if historico:
+        optimizer.agregar_historico(historico)
+
+    bardo_plan = optimizer.validar_caminos()
+    if any("ciclos" in p.lower() for p in bardo_plan):
+        raise HTTPException(
+            status_code=400,
+            detail=f"El plan de estudio tiene ciclos: {bardo_plan}",
+        )
+
+    return optimizer
 
 
 class PlanResumen(BaseModel):
@@ -44,6 +104,14 @@ class ProcessFromDbRequest(BaseModel):
 
 
 class IngestaEstudiantesResponse(BaseModel):
+    persistidos: int
+    rechazados: int
+    errores: List[str] = []
+
+
+class IngestaResponse(BaseModel):
+    """Respuesta genérica de una ingesta batch (aulas, docentes, etc)."""
+
     persistidos: int
     rechazados: int
     errores: List[str] = []
@@ -92,6 +160,46 @@ def ingestar_estudiantes(
         rechazados=len(errores),
         errores=errores,
     )
+
+
+@router.post("/aulas", response_model=IngestaResponse, status_code=201)
+def ingestar_aulas(aulas: List[dict], db: Session = Depends(get_db)) -> IngestaResponse:
+    """
+    Ingesta una lista de aulas (idempotente por aula_id).
+    Items invalidos se rechazan individualmente sin abortar el batch.
+    """
+    repo = AulaRepository(db)
+    persistidos = 0
+    errores: List[str] = []
+    for item in aulas:
+        try:
+            aula = Aula(**item)
+        except ValidationError as e:
+            errores.append(f"{item.get('aula_id', '?')}: {e.error_count()} errores")
+            continue
+        repo.upsert(aula)
+        persistidos += 1
+    return IngestaResponse(persistidos=persistidos, rechazados=len(errores), errores=errores)
+
+
+@router.post("/docentes", response_model=IngestaResponse, status_code=201)
+def ingestar_docentes(docentes: List[dict], db: Session = Depends(get_db)) -> IngestaResponse:
+    """
+    Ingesta una lista de docentes (idempotente por docente_id).
+    Items invalidos se rechazan individualmente sin abortar el batch.
+    """
+    repo = DocenteRepository(db)
+    persistidos = 0
+    errores: List[str] = []
+    for item in docentes:
+        try:
+            docente = Docente(**item)
+        except ValidationError as e:
+            errores.append(f"{item.get('docente_id', '?')}: {e.error_count()} errores")
+            continue
+        repo.upsert(docente)
+        persistidos += 1
+    return IngestaResponse(persistidos=persistidos, rechazados=len(errores), errores=errores)
 
 
 @router.get("/planes", response_model=List[PlanResumen])
@@ -147,41 +255,23 @@ def procesar_desde_db(
     Levanta el plan y los estudiantes de la DB y corre el motor.
     Equivalente a POST /process pero sin que el front mande el JSON entero.
     """
-    plan = PlanRepository(db).get(codigo_plan)
-    if plan is None:
-        raise HTTPException(status_code=404, detail=f"Plan {codigo_plan} no existe")
-
-    estudiantes = EstudianteRepository(db).list_by_plan(codigo_plan)
-
-    optimizer = KairosOptimizer(plan, request.config)
-    for est in estudiantes:
-        optimizer.agregar_estudiante(est)
-
-    # Cargar recursos desde la DB para enriquecer las comisiones
-    recursos = RecursoRepository(db).list_all()
-    if recursos:
-        optimizer.agregar_recursos(recursos)
-
-    bardo_plan = optimizer.validar_caminos()
-    if any("ciclos" in p.lower() for p in bardo_plan):
-        raise HTTPException(
-            status_code=400,
-            detail=f"El plan de estudio tiene ciclos: {bardo_plan}",
-        )
+    optimizer = _construir_optimizer(db, codigo_plan, request.config)
 
     prescripciones = optimizer.prescribir_aperturas()
     demanda = optimizer.analizar_demanda()
     cuellos = optimizer.detectar_cuellos_de_botella()
     resumen = optimizer.reporte_prescriptivo()
+    metricas = optimizer.metricas_operativas(prescripciones)
 
     config_efectiva = request.config or ConfiguracionKairos()
     return ResponsePrescripcion(
-        carrera=plan.nombre_carrera,
+        carrera=optimizer.plan.nombre_carrera,
         prescripciones=prescripciones,
         cuellos_botella=cuellos,
         demanda_total=sum(demanda.values()),
         materias_con_demanda=len(demanda),
         resumen=resumen,
+        metricas_operativas=metricas,
         config_usada={
             "weight_tasa_graduacion": config_efectiva.weight_tasa_graduacion,
             "weight_eficiencia_operativa": config_efectiva.weight_eficiencia_operativa,
@@ -190,6 +280,65 @@ def procesar_desde_db(
             "max_comisiones_a_abrir": config_efectiva.max_comisiones_a_abrir,
         },
     )
+
+
+def _config_a_dict(config: ConfiguracionKairos) -> dict:
+    """Resumen serializable de una config para devolver en los reportes."""
+    return {
+        "weight_tasa_graduacion": config.weight_tasa_graduacion,
+        "weight_eficiencia_operativa": config.weight_eficiencia_operativa,
+        "min_tasa_ocupacion": config.min_tasa_ocupacion,
+        "max_cupos_por_comision": config.max_cupos_por_comision,
+        "max_comisiones_a_abrir": config.max_comisiones_a_abrir,
+        "respetar_capacidad_aulas": config.respetar_capacidad_aulas,
+        "respetar_disponibilidad_docentes": config.respetar_disponibilidad_docentes,
+        "usar_historico_docentes": config.usar_historico_docentes,
+    }
+
+
+@router.post(
+    "/planes/{codigo_plan}/reportes/comparativo",
+    response_model=ResponseReporteComparativo,
+)
+def reporte_comparativo(
+    codigo_plan: str,
+    request: RequestReporteComparativo,
+    db: Session = Depends(get_db),
+) -> ResponseReporteComparativo:
+    """
+    Corre el motor con 2-3 configuraciones distintas y devuelve métricas
+    comparables (ingresos, completitud de aulas, alocación de docentes,
+    demanda satisfecha, cobertura de cuellos de botella) para graficarlas
+    lado a lado en la reportería.
+    """
+    if not (1 <= len(request.configuraciones) <= 3):
+        raise HTTPException(
+            status_code=400,
+            detail="Mandá entre 1 y 3 configuraciones para comparar.",
+        )
+
+    carrera = ""
+    escenarios = []
+    for i, item in enumerate(request.configuraciones):
+        config = item.config or ConfiguracionKairos()
+        # Cada escenario reconstruye su optimizer: el motor consume recursos
+        # (aulas/docentes) durante la corrida, así que no se puede reusar.
+        optimizer = _construir_optimizer(db, codigo_plan, config)
+        carrera = optimizer.plan.nombre_carrera
+
+        prescripciones = optimizer.prescribir_aperturas()
+        metricas = optimizer.metricas_operativas(prescripciones)
+
+        nombre = item.nombre or f"Config {i + 1}"
+        escenarios.append(
+            EscenarioReporte(
+                nombre=nombre,
+                config_usada=_config_a_dict(config),
+                metricas=metricas,
+            )
+        )
+
+    return ResponseReporteComparativo(carrera=carrera, escenarios=escenarios)
 
 
 @router.post("/planes/{codigo_plan}/export/excel")
@@ -202,26 +351,8 @@ def exportar_excel(
     Corre la optimización y exporta la propuesta definitiva de comisiones a un archivo Excel
     con detalles de aulas, profesores y marcado de comisiones con bajo cupo (riesgo).
     """
-    plan = PlanRepository(db).get(codigo_plan)
-    if plan is None:
-        raise HTTPException(status_code=404, detail=f"Plan {codigo_plan} no existe")
-
-    estudiantes = EstudianteRepository(db).list_by_plan(codigo_plan)
-
-    optimizer = KairosOptimizer(plan, request.config)
-    for est in estudiantes:
-        optimizer.agregar_estudiante(est)
-
-    recursos = RecursoRepository(db).list_all()
-    if recursos:
-        optimizer.agregar_recursos(recursos)
-
-    bardo_plan = optimizer.validar_caminos()
-    if any("ciclos" in p.lower() for p in bardo_plan):
-        raise HTTPException(
-            status_code=400,
-            detail=f"El plan de estudio tiene ciclos: {bardo_plan}",
-        )
+    optimizer = _construir_optimizer(db, codigo_plan, request.config)
+    plan = optimizer.plan
 
     prescripciones = optimizer.prescribir_aperturas()
 

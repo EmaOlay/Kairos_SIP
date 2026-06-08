@@ -25,10 +25,16 @@ async def procesar_demanda(request: RequestProcesamiento):
         # 2. Cargar los datos
         for est in request.estudiantes:
             optimizer.agregar_estudiante(est)
-        
+
         if request.recursos:
             optimizer.agregar_recursos(request.recursos)
-        
+        if request.aulas:
+            optimizer.agregar_aulas(request.aulas)
+        if request.docentes:
+            optimizer.agregar_docentes(request.docentes)
+        if request.historico:
+            optimizer.agregar_historico(request.historico)
+
         # 3. Correr validaciones basicas del plan
         bardo_plan = optimizer.validar_caminos()
         if any("ciclos" in p.lower() for p in bardo_plan):
@@ -41,10 +47,11 @@ async def procesar_demanda(request: RequestProcesamiento):
         prescripciones = optimizer.prescribir_aperturas()
         demanda = optimizer.analizar_demanda()
         cuellos = optimizer.detectar_cuellos_de_botella()
-        
+
         # 5. Armar la respuesta
         resumen = optimizer.reporte_prescriptivo()
-        
+        metricas = optimizer.metricas_operativas(prescripciones)
+
         config_efectiva = request.config or ConfiguracionKairos()
         return ResponsePrescripcion(
             carrera=request.plan.nombre_carrera,
@@ -53,6 +60,7 @@ async def procesar_demanda(request: RequestProcesamiento):
             demanda_total=sum(demanda.values()),
             materias_con_demanda=len(demanda),
             resumen=resumen,
+            metricas_operativas=metricas,
             config_usada={
                 "weight_tasa_graduacion": config_efectiva.weight_tasa_graduacion,
                 "weight_eficiencia_operativa": config_efectiva.weight_eficiencia_operativa,

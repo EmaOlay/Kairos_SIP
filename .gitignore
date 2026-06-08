@@ -55,6 +55,9 @@ docker-compose.override.yml
 data/raw/*
 !data/raw/plan_uade_api.json
 !data/raw/estudiantes_uade.json
+!data/raw/aulas_uade.json
+!data/raw/docentes_uade.json
+!data/raw/historico_dictado_uade.json
 data/processed/
 outputs/
 *.log
