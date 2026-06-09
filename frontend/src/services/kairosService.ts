@@ -40,6 +40,43 @@ export interface PlanSummary {
   cantidad_materias: number;
 }
 
+export interface OperationalMetrics {
+  comisiones_abiertas: number;
+  ingresos_proyectados: number;
+  demanda_total: number;
+  demanda_satisfecha: number;
+  pct_demanda_satisfecha: number;
+  aulas_totales: number;
+  aulas_usadas: number;
+  capacidad_instalada: number;
+  pct_ocupacion_aulas: number;
+  docentes_totales: number;
+  docentes_asignados: number;
+  docentes_libres: number;
+  pct_docentes_asignados: number;
+  cuellos_botella_total: number;
+  cuellos_botella_cubiertos: number;
+  pct_cuellos_cubiertos: number;
+  comisiones_sin_aula: number;
+  comisiones_sin_docente: number;
+}
+
+export interface ScenarioConfig {
+  nombre: string;
+  config?: Partial<KairosConfig> | null;
+}
+
+export interface ScenarioReport {
+  nombre: string;
+  config_usada: Record<string, any>;
+  metricas: OperationalMetrics;
+}
+
+export interface ComparativeReport {
+  carrera: string;
+  escenarios: ScenarioReport[];
+}
+
 export const kairosService = {
   async getConfig(): Promise<KairosConfig> {
     const response = await fetch(`${API_BASE_URL}/config`);
@@ -136,6 +173,36 @@ export const kairosService = {
     return response.json();
   },
 
+  async ingestarAulas(
+    aulas: any[]
+  ): Promise<{ persistidos: number; rechazados: number; errores: string[] }> {
+    const response = await fetch(`${API_BASE_URL}/aulas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(aulas),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error ingestando aulas');
+    }
+    return response.json();
+  },
+
+  async ingestarDocentes(
+    docentes: any[]
+  ): Promise<{ persistidos: number; rechazados: number; errores: string[] }> {
+    const response = await fetch(`${API_BASE_URL}/docentes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(docentes),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error ingestando docentes');
+    }
+    return response.json();
+  },
+
   async processFromDb(codigoPlan: string, config?: KairosConfig) {
     const response = await fetch(
       `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/process`,
@@ -149,6 +216,27 @@ export const kairosService = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || 'Error procesando la demanda desde la DB');
+    }
+
+    return response.json();
+  },
+
+  async reporteComparativo(
+    codigoPlan: string,
+    configuraciones: ScenarioConfig[]
+  ): Promise<ComparativeReport> {
+    const response = await fetch(
+      `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/reportes/comparativo`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configuraciones }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error generando el reporte comparativo');
     }
 
     return response.json();

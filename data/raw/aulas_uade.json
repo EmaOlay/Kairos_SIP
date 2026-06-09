@@ -1,0 +1,233 @@
+[
+  {
+    "aula_id": "AULA001",
+    "nombre": "Auditorio 1",
+    "capacidad": 120,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA002",
+    "nombre": "Magna 2",
+    "capacidad": 80,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA003",
+    "nombre": "Magna 3",
+    "capacidad": 80,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA004",
+    "nombre": "Aula 4",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA005",
+    "nombre": "Aula 5",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA006",
+    "nombre": "Aula 6",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA007",
+    "nombre": "Aula 7",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA008",
+    "nombre": "Aula 8",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA009",
+    "nombre": "Aula 9",
+    "capacidad": 50,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA010",
+    "nombre": "Aula 10",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA011",
+    "nombre": "Aula 11",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA012",
+    "nombre": "Aula 12",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA013",
+    "nombre": "Aula 13",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA014",
+    "nombre": "Aula 14",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA015",
+    "nombre": "Aula 15",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA016",
+    "nombre": "Aula 16",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA017",
+    "nombre": "Aula 17",
+    "capacidad": 35,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA018",
+    "nombre": "Lab 18",
+    "capacidad": 25,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA019",
+    "nombre": "Lab 19",
+    "capacidad": 25,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA020",
+    "nombre": "Lab 20",
+    "capacidad": 25,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  },
+  {
+    "aula_id": "AULA021",
+    "nombre": "Lab 21",
+    "capacidad": 25,
+    "sede": "Monserrat",
+    "turnos_disponibles": [
+      "manana",
+      "tarde",
+      "noche"
+    ]
+  }
+]

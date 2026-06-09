@@ -223,6 +223,73 @@ class RecursoDisponible(BaseModel):
         return self.costo_operativo_base + costo_var
 
 
+class Aula(BaseModel):
+    """
+    Representa un aula fisica de la institucion.
+
+    El motor usa la cantidad y capacidad de aulas como restriccion dura:
+    por turno solo se pueden abrir tantas comisiones como aulas disponibles
+    haya, y cada comision no puede tener mas alumnos que la capacidad del aula.
+    """
+    aula_id: str
+    nombre: str
+    capacidad: int  # asientos disponibles
+    sede: Optional[str] = None
+    # Turnos en los que el aula puede usarse. Un aula libre de manana sigue
+    # libre de tarde, asi que la misma aula puede alojar comisiones distintas
+    # en turnos distintos.
+    turnos_disponibles: List[str] = Field(
+        default_factory=lambda: ["manana", "tarde", "noche"]
+    )
+
+    @validator("capacidad")
+    def validar_capacidad(cls, v):
+        if v <= 0:
+            raise ValueError("La capacidad del aula debe ser positiva")
+        return v
+
+
+class Docente(BaseModel):
+    """
+    Representa un docente del pool, con las materias que puede dictar y su
+    disponibilidad horaria por turno.
+
+    Si `horario_fehaciente` es False, la disponibilidad y/o las materias se
+    consideran incompletas y el motor las completa estimandolas a partir del
+    historico de dictado (ver HistoricoDictado).
+    """
+    docente_id: str
+    nombre: str
+    # Codigos de materia que el docente esta habilitado a dictar.
+    materias_que_dicta: List[str] = Field(default_factory=list)
+    # Turnos en los que el docente declara estar disponible.
+    disponibilidad_turnos: List[str] = Field(default_factory=list)
+    # Carga maxima: cuantas comisiones puede tomar en el cuatrimestre.
+    max_comisiones: int = 3
+    # Si tenemos el horario confirmado del docente. Si es False, el motor
+    # estima su disponibilidad con el historico.
+    horario_fehaciente: bool = True
+
+
+class HistoricoDictado(BaseModel):
+    """
+    Registro historico de un curso efectivamente dictado por un docente.
+
+    Sirve para estimar la disponibilidad de un docente cuando no tenemos su
+    horario fehaciente: si dicto Programacion I de noche los ultimos
+    cuatrimestres, es una buena apuesta que pueda volver a hacerlo.
+    """
+    historico_id: str
+    docente_id: str
+    docente_nombre: str
+    codigo_materia: str
+    nombre_materia: Optional[str] = None
+    turno: str
+    ano: int
+    cuatrimestre: int
+    cantidad_alumnos: Optional[int] = None
+
+
 class ConfiguracionKairos(BaseModel):
     """
     Configuracion global para el motor de optimizacion.
@@ -236,6 +303,15 @@ class ConfiguracionKairos(BaseModel):
     max_comisiones_a_abrir: Optional[int] = None
     anos_estudio: int = 5
     cuatrimestres_por_ano: int = 2
+    # Restricciones operativas (RF-aulas/docentes). Solo aplican si hay datos
+    # de aulas/docentes cargados; sin datos el motor se comporta como antes.
+    respetar_capacidad_aulas: bool = True
+    respetar_disponibilidad_docentes: bool = True
+    # Si True, estima la disponibilidad de docentes sin horario fehaciente
+    # usando el historico de dictado.
+    usar_historico_docentes: bool = True
+    # Etiqueta opcional para identificar esta config en reportes comparativos.
+    nombre_config: Optional[str] = None
 
     @validator("min_tasa_ocupacion")
     def validar_tasa(cls, v):

@@ -15,7 +15,10 @@ from collections import defaultdict
 import networkx as nx
 
 from kairos.schemas.data_models import (
+    Aula,
+    Docente,
     EstudianteTrayectoria,
+    HistoricoDictado,
     PlanEstudio,
     RecursoDisponible,
     ConfiguracionKairos,
@@ -52,10 +55,15 @@ class KairosOptimizer:
         
         # Recursos disponibles
         self.recursos: Dict[str, RecursoDisponible] = {}
-        
+
+        # Recursos operativos (capacidad de aulas + pool de docentes)
+        self.aulas: Dict[str, Aula] = {}
+        self.docentes: Dict[str, Docente] = {}
+        self.historico: List[HistoricoDictado] = []
+
         # Demanda por materia (estudiantes que necesitan cursarla)
         self.demanda_por_materia: Dict[str, Set[str]] = defaultdict(set)
-        
+
         self._inicializar_grafo()
         logger.info(f" KairosOptimizer inicializado para {plan_estudio.nombre_carrera}")
 
@@ -132,6 +140,77 @@ class KairosOptimizer:
         for recurso in recursos:
             self.recursos[recurso.recurso_id] = recurso
         logger.info(f" {len(self.recursos)} recursos agregados")
+
+    def agregar_aulas(self, aulas: List[Aula]) -> None:
+        """Agrega aulas (capacidad y cantidad) como restriccion del motor."""
+        for aula in aulas:
+            self.aulas[aula.aula_id] = aula
+        logger.info(f" {len(self.aulas)} aulas agregadas")
+
+    def agregar_docentes(self, docentes: List[Docente]) -> None:
+        """Agrega el pool de docentes con su disponibilidad horaria."""
+        for docente in docentes:
+            self.docentes[docente.docente_id] = docente
+        logger.info(f" {len(self.docentes)} docentes agregados")
+
+    def agregar_historico(self, historico: List[HistoricoDictado]) -> None:
+        """
+        Carga el historico de dictado. Se usa para estimar la disponibilidad
+        de los docentes que no tienen horario fehaciente.
+        """
+        self.historico.extend(historico)
+        logger.info(f" {len(historico)} registros de historico agregados")
+
+    def _aulas_por_turno(self) -> Dict[str, List[Aula]]:
+        """
+        Arma el pool de aulas disponibles por turno, ordenadas por capacidad
+        descendente (asi asignamos primero las grandes a las comisiones con
+        mas demanda). Una misma aula sirve en cada turno que tenga habilitado:
+        si esta libre de manana sigue libre de tarde.
+        """
+        pool: Dict[str, List[Aula]] = defaultdict(list)
+        for aula in self.aulas.values():
+            for turno in aula.turnos_disponibles:
+                pool[turno].append(aula)
+        for turno in pool:
+            pool[turno].sort(key=lambda a: a.capacidad, reverse=True)
+        return pool
+
+    def _perfil_docentes_estimado(self) -> Dict[str, Docente]:
+        """
+        Devuelve una copia de los docentes con la disponibilidad completada
+        a partir del historico para los que no tienen horario fehaciente.
+
+        Estimacion: si un docente sin horario confirmado dicto una materia en
+        un turno dado en el pasado, asumimos que puede volver a dictarla en ese
+        turno. Asi tenemos una buena aproximacion en vez de descartarlo.
+        """
+        if not self.config.usar_historico_docentes or not self.historico:
+            return dict(self.docentes)
+
+        # Indexar historico por docente
+        materias_hist: Dict[str, Set[str]] = defaultdict(set)
+        turnos_hist: Dict[str, Set[str]] = defaultdict(set)
+        for h in self.historico:
+            materias_hist[h.docente_id].add(h.codigo_materia)
+            turnos_hist[h.docente_id].add(h.turno)
+
+        estimados: Dict[str, Docente] = {}
+        for did, doc in self.docentes.items():
+            if doc.horario_fehaciente:
+                estimados[did] = doc
+                continue
+            # Completamos materias y turnos con lo que surja del historico,
+            # sin pisar lo que el docente ya haya declarado.
+            materias = sorted(set(doc.materias_que_dicta) | materias_hist.get(did, set()))
+            turnos = sorted(set(doc.disponibilidad_turnos) | turnos_hist.get(did, set()))
+            estimados[did] = doc.model_copy(
+                update={
+                    "materias_que_dicta": materias,
+                    "disponibilidad_turnos": turnos,
+                }
+            )
+        return estimados
 
     def analizar_demanda(self) -> Dict[str, int]:
         """
@@ -228,6 +307,50 @@ class KairosOptimizer:
         )
         return round(score, 2)
 
+    def _elegir_docente(
+        self,
+        codigo: str,
+        turno: str,
+        carga: Dict[str, int],
+        perfil: Dict[str, Docente],
+    ) -> Optional[Docente]:
+        """
+        Elige un docente que pueda dictar `codigo` en `turno` y que todavia
+        tenga carga libre. Reparte la carga eligiendo al docente menos cargado
+        (asi tendemos a que no quede ninguno libre). Desempate determinista
+        por id. Devuelve None si no hay candidato (no se podra abrir).
+        """
+        candidatos = [
+            d
+            for d in perfil.values()
+            if codigo in d.materias_que_dicta
+            and turno in d.disponibilidad_turnos
+            and carga[d.docente_id] < d.max_comisiones
+        ]
+        if not candidatos:
+            return None
+        candidatos.sort(key=lambda d: (carga[d.docente_id], d.docente_id))
+        return candidatos[0]
+
+    def _tomar_aula(self, pool_turno: List[Aula], demanda: int) -> Optional[Aula]:
+        """
+        Saca del pool del turno el aula mas conveniente para la demanda dada
+        (best-fit: la mas chica que cubra la demanda; si ninguna alcanza, la
+        mas grande disponible y el excedente queda como demanda no satisfecha).
+        Remueve el aula del pool porque pasa a estar ocupada en ese turno.
+        Devuelve None si no quedan aulas en el turno.
+        """
+        if not pool_turno:
+            return None
+        aptas = [a for a in pool_turno if a.capacidad >= demanda]
+        elegida = (
+            min(aptas, key=lambda a: a.capacidad)
+            if aptas
+            else max(pool_turno, key=lambda a: a.capacidad)
+        )
+        pool_turno.remove(elegida)
+        return elegida
+
     def prescribir_aperturas(self) -> Dict[str, Dict]:
         """
         Prescribe que comisiones abrir por materia+turno.
@@ -235,6 +358,11 @@ class KairosOptimizer:
         Splitea la demanda por turno preferido del alumno, calcula el score
         de cada combinación materia+turno usando cascada + demanda/costo,
         y rankea para decidir cuáles abrir.
+
+        Si hay aulas y/o docentes cargados (y la config lo habilita), aplica
+        restricciones duras: no se abre una comisión sin aula libre en el turno
+        ni sin un docente habilitado y disponible. La capacidad del aula limita
+        los cupos efectivos; el excedente queda como demanda no satisfecha.
         """
         logger.info("Analizando demanda por turno y prescribiendo aperturas...")
 
@@ -258,9 +386,20 @@ class KairosOptimizer:
         tope = self.config.max_comisiones_a_abrir
         abiertas = 0
 
+        # Las restricciones operativas solo aplican si hay datos cargados y la
+        # config lo habilita. Sin datos, el motor se comporta como siempre.
+        aplica_aulas = self.config.respetar_capacidad_aulas and bool(self.aulas)
+        aplica_docentes = self.config.respetar_disponibilidad_docentes and bool(self.docentes)
+        pool_aulas = self._aulas_por_turno() if aplica_aulas else {}
+        perfil_docentes = self._perfil_docentes_estimado() if aplica_docentes else {}
+        carga_docentes: Dict[str, int] = defaultdict(int)
+
+        import hashlib
+
         for codigo, turno, materia, score, cantidad, cascada, ingreso, est_list in ranking:
             supera_minimo = score >= score_minimo
 
+            # 1) Decisión base por score y tope presupuestario.
             if supera_minimo and (tope is None or abiertas < tope):
                 decision = "ABRIR"
                 razon = (
@@ -268,44 +407,96 @@ class KairosOptimizer:
                     f"Desbloquea {cascada} materias y junta {cantidad} alumnos "
                     f"(${int(cantidad * ingreso):,} de ingreso)."
                 )
-                abiertas += 1
             elif not supera_minimo:
+                decision = "NO ABRIR"
                 razon = (
                     f"Score {score} < mínimo {score_minimo:.1f}. "
                     f"Demanda baja ({cantidad} alumnos) o poco impacto en cascada ({cascada})."
                 )
-                decision = "NO ABRIR"
             else:
+                decision = "NO ABRIR"
                 razon = (
                     f"Tope presupuestario alcanzado ({tope} comisiones). "
                     f"Score {score} no entró en el ranking."
                 )
-                decision = "NO ABRIR"
 
-            # Asignar aula y docente de manera híbrida (DB si existe, sino generados)
-            aula = "Aula Virtual" if turno == "virtual" else None
-            docente = None
+            # 2) Restricciones duras de recursos. Validamos docente primero
+            # (no consume nada) y recién después tomamos aula, así si falta
+            # docente no "gastamos" un aula del pool.
+            docente_obj: Optional[Docente] = None
+            aula_obj: Optional[Aula] = None
+            motivo_recurso: Optional[str] = None
 
-            # Buscar en recursos cargados
-            for r in self.recursos.values():
-                if r.codigo_materia == codigo:
-                    r_turno = "noche"
-                    try:
-                        hora = int(r.horario_inicio.split(":")[0])
-                        if hora < 13:
-                            r_turno = "manana"
-                        elif hora < 18:
-                            r_turno = "tarde"
-                    except Exception:
-                        pass
-                    if r_turno == turno:
-                        docente = r.docente_nombre
-                        if r.modalidad == "virtual":
-                            aula = "Aula Virtual"
-                        break
+            if decision == "ABRIR" and aplica_docentes:
+                docente_obj = self._elegir_docente(
+                    codigo, turno, carga_docentes, perfil_docentes
+                )
+                if docente_obj is None:
+                    decision = "NO ABRIR"
+                    motivo_recurso = "sin_docente"
+                    razon = (
+                        f"Sin docente disponible para {codigo} en turno {turno} "
+                        f"(ninguno habilitado/libre). No se puede abrir."
+                    )
+
+            if decision == "ABRIR" and aplica_aulas:
+                aula_obj = self._tomar_aula(pool_aulas.get(turno, []), cantidad)
+                if aula_obj is None:
+                    decision = "NO ABRIR"
+                    motivo_recurso = "sin_aula"
+                    razon = (
+                        f"Sin aulas libres en turno {turno}. "
+                        f"Se agotó la capacidad edilicia para esta franja."
+                    )
+
+            # 3) Si finalmente abre, consumimos recursos y calculamos cupos.
+            cupos_asignados: Optional[int] = None
+            if decision == "ABRIR":
+                if docente_obj is not None:
+                    carga_docentes[docente_obj.docente_id] += 1
+                if aula_obj is not None:
+                    cupos_asignados = aula_obj.capacidad
+                abiertas += 1
+                # Si hubo cupo de aula, enriquecemos la razón con el dato.
+                if aula_obj is not None and cantidad > aula_obj.capacidad:
+                    razon += (
+                        f" Aula {aula_obj.nombre} (cap. {aula_obj.capacidad}): "
+                        f"{cantidad - aula_obj.capacidad} alumnos quedan sin cupo."
+                    )
+
+            # Cupos efectivos: limitados por la capacidad del aula si hubo una.
+            cupo_efectivo = cantidad if cupos_asignados is None else min(cantidad, cupos_asignados)
+            demanda_satisfecha = cupo_efectivo if decision == "ABRIR" else 0
+            demanda_no_satisfecha = cantidad - demanda_satisfecha
+
+            # 4) Resolver nombres mostrables de aula y docente.
+            # Si el nuevo modelo asignó recursos reales, esos mandan; sino,
+            # caemos a la lógica híbrida histórica (recursos + heurística).
+            aula = aula_obj.nombre if aula_obj is not None else (
+                "Aula Virtual" if turno == "virtual" else None
+            )
+            docente = docente_obj.nombre if docente_obj is not None else None
+
+            if docente is None:
+                # Buscar en recursos (comisiones) cargados a la vieja usanza.
+                for r in self.recursos.values():
+                    if r.codigo_materia == codigo:
+                        r_turno = "noche"
+                        try:
+                            hora = int(r.horario_inicio.split(":")[0])
+                            if hora < 13:
+                                r_turno = "manana"
+                            elif hora < 18:
+                                r_turno = "tarde"
+                        except Exception:
+                            pass
+                        if r_turno == turno:
+                            docente = r.docente_nombre
+                            if r.modalidad == "virtual" and aula is None:
+                                aula = "Aula Virtual"
+                            break
 
             # Heurística determinista si no hay datos en la DB
-            import hashlib
             h = int(hashlib.md5(codigo.encode('utf-8')).hexdigest(), 16)
             if not docente:
                 nombres = ["Carlos", "Elena", "Martín", "Ana", "Lucas", "Sofía", "Jorge", "María", "Diego", "Laura", "Gabriel", "Patricia"]
@@ -336,6 +527,13 @@ class KairosOptimizer:
                 "aula": aula,
                 "docente": docente,
                 "bajo_cupo": bajo_cupo,
+                # Métricas operativas (alimentan la reportería comparativa)
+                "aula_id": aula_obj.aula_id if aula_obj is not None else None,
+                "capacidad_aula": cupos_asignados,
+                "docente_id": docente_obj.docente_id if docente_obj is not None else None,
+                "demanda_satisfecha": demanda_satisfecha,
+                "demanda_no_satisfecha": demanda_no_satisfecha,
+                "motivo_no_apertura": motivo_recurso,
             }
 
         prescripciones = dict(
@@ -343,6 +541,104 @@ class KairosOptimizer:
         )
 
         return prescripciones
+
+    def metricas_operativas(
+        self, prescripciones: Optional[Dict[str, Dict]] = None
+    ) -> Dict:
+        """
+        Agrega métricas operativas de una corrida para la reportería comparativa.
+
+        Calcula, sobre las comisiones que se abren:
+        - Ingresos proyectados (sumatoria de alumnos con cupo × ingreso/alumno).
+        - Completitud de aulas (ocupación promedio: alumnos / capacidad).
+        - Alocación de docentes (cuántos del pool quedan asignados vs libres).
+        - Demanda de alumnos satisfecha (con cupo) vs total.
+        - Métrica extra: cobertura de cuellos de botella (materias críticas
+          que efectivamente se abren).
+
+        Pensado para llamarse con el resultado de prescribir_aperturas(), pero
+        si no se pasa nada lo corre solo.
+        """
+        if prescripciones is None:
+            prescripciones = self.prescribir_aperturas()
+
+        abiertas = [p for p in prescripciones.values() if p["decision"] == "ABRIR"]
+
+        # --- Ingresos ---
+        # Si hubo restricción de aula, cobramos por los alumnos con cupo real.
+        ingresos_total = 0
+        for p in abiertas:
+            con_cupo = p.get("demanda_satisfecha")
+            if con_cupo is None:
+                con_cupo = p["demanda"]
+            ingresos_total += int(con_cupo * p["ingreso_por_alumno"])
+
+        # --- Demanda de alumnos ---
+        # Cantidad de (alumno, materia, turno) total y cuántos quedan satisfechos.
+        demanda_total = sum(p["demanda"] for p in prescripciones.values())
+        demanda_satisfecha = sum(
+            (p.get("demanda_satisfecha") or 0) for p in abiertas
+        )
+        # Para corridas sin restricción de aulas, satisfecha == demanda de abiertas.
+        if not self.aulas:
+            demanda_satisfecha = sum(p["demanda"] for p in abiertas)
+        pct_demanda = round(100 * demanda_satisfecha / demanda_total, 1) if demanda_total else 0.0
+
+        # --- Completitud / ocupación de aulas ---
+        comisiones_con_aula = [p for p in abiertas if p.get("capacidad_aula")]
+        if comisiones_con_aula:
+            capacidad_instalada = sum(p["capacidad_aula"] for p in comisiones_con_aula)
+            ocupacion = sum(
+                min(p["demanda"], p["capacidad_aula"]) for p in comisiones_con_aula
+            )
+            pct_ocupacion = round(100 * ocupacion / capacidad_instalada, 1) if capacidad_instalada else 0.0
+        else:
+            capacidad_instalada = 0
+            pct_ocupacion = 0.0
+
+        aulas_totales = len(self.aulas)
+        # Un aula puede usarse en más de un turno; contamos asignaciones únicas.
+        aulas_usadas = len({p["aula_id"] for p in abiertas if p.get("aula_id")})
+
+        # --- Alocación de docentes ---
+        docentes_totales = len(self.docentes)
+        docentes_asignados = len({p["docente_id"] for p in abiertas if p.get("docente_id")})
+        docentes_libres = max(0, docentes_totales - docentes_asignados)
+        pct_docentes = round(100 * docentes_asignados / docentes_totales, 1) if docentes_totales else 0.0
+
+        # --- Métrica extra: cobertura de cuellos de botella ---
+        cuellos = {c["codigo"] for c in self.detectar_cuellos_de_botella()}
+        cuellos_abiertos = {p["codigo"] for p in abiertas if p["codigo"] in cuellos}
+        pct_cuellos = round(100 * len(cuellos_abiertos) / len(cuellos), 1) if cuellos else 0.0
+
+        # Comisiones que no abrieron por falta de recurso (diagnóstico).
+        no_abiertas_por_aula = sum(
+            1 for p in prescripciones.values() if p.get("motivo_no_apertura") == "sin_aula"
+        )
+        no_abiertas_por_docente = sum(
+            1 for p in prescripciones.values() if p.get("motivo_no_apertura") == "sin_docente"
+        )
+
+        return {
+            "comisiones_abiertas": len(abiertas),
+            "ingresos_proyectados": ingresos_total,
+            "demanda_total": demanda_total,
+            "demanda_satisfecha": demanda_satisfecha,
+            "pct_demanda_satisfecha": pct_demanda,
+            "aulas_totales": aulas_totales,
+            "aulas_usadas": aulas_usadas,
+            "capacidad_instalada": capacidad_instalada,
+            "pct_ocupacion_aulas": pct_ocupacion,
+            "docentes_totales": docentes_totales,
+            "docentes_asignados": docentes_asignados,
+            "docentes_libres": docentes_libres,
+            "pct_docentes_asignados": pct_docentes,
+            "cuellos_botella_total": len(cuellos),
+            "cuellos_botella_cubiertos": len(cuellos_abiertos),
+            "pct_cuellos_cubiertos": pct_cuellos,
+            "comisiones_sin_aula": no_abiertas_por_aula,
+            "comisiones_sin_docente": no_abiertas_por_docente,
+        }
 
     def calcular_promedio_estudiante(
         self, estudiante_id: str

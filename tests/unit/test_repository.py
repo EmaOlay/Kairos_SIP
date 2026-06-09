@@ -13,7 +13,10 @@ from sqlalchemy.orm import sessionmaker
 from kairos.core.optimizer import KairosOptimizer
 from kairos.db.base import Base
 from kairos.db.repository import (
+    AulaRepository,
+    DocenteRepository,
     EstudianteRepository,
+    HistoricoRepository,
     PlanRepository,
     RecursoRepository,
 )
@@ -129,3 +132,57 @@ class TestRecursoRepository:
         assert r.recurso_id == "COM001"
         assert r.dias_semana == ["Lunes", "Miercoles"]
         assert r.cupos_disponibles == 20
+
+
+class TestAulaRepository:
+    def test_roundtrip_aula(self, session, aula_basica):
+        repo = AulaRepository(session)
+        repo.upsert(aula_basica)
+
+        listados = repo.list_all()
+        assert len(listados) == 1
+        a = listados[0]
+        assert a.aula_id == "AULA001"
+        assert a.capacidad == 40
+        assert a.turnos_disponibles == ["manana", "tarde", "noche"]
+
+    def test_upsert_idempotente(self, session, aula_basica):
+        repo = AulaRepository(session)
+        repo.upsert(aula_basica)
+        repo.upsert(aula_basica)
+        assert len(repo.list_all()) == 1
+
+
+class TestDocenteRepository:
+    def test_roundtrip_docente(self, session, docente_fundamentos):
+        repo = DocenteRepository(session)
+        repo.upsert(docente_fundamentos)
+
+        listados = repo.list_all()
+        assert len(listados) == 1
+        d = listados[0]
+        assert d.docente_id == "DOC001"
+        assert d.materias_que_dicta == ["3.4.069"]
+        assert d.disponibilidad_turnos == ["noche"]
+        assert d.horario_fehaciente is True
+
+    def test_docente_sin_horario_persiste_flag(self, session, docente_sin_horario):
+        repo = DocenteRepository(session)
+        repo.upsert(docente_sin_horario)
+        d = repo.list_all()[0]
+        assert d.horario_fehaciente is False
+        assert d.disponibilidad_turnos == []
+
+
+class TestHistoricoRepository:
+    def test_roundtrip_historico(self, session, historico_fundamentos):
+        repo = HistoricoRepository(session)
+        repo.upsert(historico_fundamentos)
+
+        listados = repo.list_all()
+        assert len(listados) == 1
+        h = listados[0]
+        assert h.historico_id == "H0001"
+        assert h.codigo_materia == "3.4.069"
+        assert h.turno == "noche"
+        assert h.cantidad_alumnos == 30

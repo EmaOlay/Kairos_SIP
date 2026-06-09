@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -142,3 +143,46 @@ class RecursoORM(Base):
 
     costo_operativo_base: Mapped[Optional[float]] = mapped_column(Float)
     costo_por_alumno: Mapped[Optional[float]] = mapped_column(Float)
+
+
+class AulaORM(Base):
+    """Aula fisica con su capacidad. Restriccion dura del motor."""
+
+    __tablename__ = "aulas"
+
+    aula_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    capacidad: Mapped[int] = mapped_column(Integer, nullable=False)
+    sede: Mapped[Optional[str]] = mapped_column(String(255))
+    # turnos_disponibles serializado como JSON-string (portabilidad cross-engine)
+    turnos_disponibles_json: Mapped[Optional[str]] = mapped_column(String(255))
+
+
+class DocenteORM(Base):
+    """Docente del pool: materias que dicta + disponibilidad horaria."""
+
+    __tablename__ = "docentes"
+
+    docente_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Listas serializadas como JSON-string para portabilidad cross-engine
+    materias_que_dicta_json: Mapped[Optional[str]] = mapped_column(String(2000))
+    disponibilidad_turnos_json: Mapped[Optional[str]] = mapped_column(String(255))
+    max_comisiones: Mapped[int] = mapped_column(Integer, default=3)
+    horario_fehaciente: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class HistoricoDictadoORM(Base):
+    """Curso historico dictado por un docente (insumo de estimacion)."""
+
+    __tablename__ = "historico_dictado"
+
+    historico_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    docente_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    docente_nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    codigo_materia: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    nombre_materia: Mapped[Optional[str]] = mapped_column(String(255))
+    turno: Mapped[str] = mapped_column(String(16), nullable=False)
+    ano: Mapped[int] = mapped_column(Integer, nullable=False)
+    cuatrimestre: Mapped[int] = mapped_column(Integer, nullable=False)
+    cantidad_alumnos: Mapped[Optional[int]] = mapped_column(Integer)

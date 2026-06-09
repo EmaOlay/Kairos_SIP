@@ -5,7 +5,10 @@ Configuracion compartida para tests (fixtures)
 import pytest
 from datetime import datetime
 from kairos.schemas.data_models import (
+    Aula,
+    Docente,
     EstadoMateria,
+    HistoricoDictado,
     RegistroTrayectoria,
     EstudianteTrayectoria,
     Materia,
@@ -136,4 +139,58 @@ def recurso_disponible_lleno():
         horario_inicio="14:00",
         horario_fin="17:00",
         dias_semana=["Martes", "Jueves"],
+    )
+
+
+@pytest.fixture
+def aula_basica():
+    """Fixture: aula con capacidad media, disponible en los 3 turnos."""
+    return Aula(
+        aula_id="AULA001",
+        nombre="Aula 1",
+        capacidad=40,
+        sede="Monserrat",
+        turnos_disponibles=["manana", "tarde", "noche"],
+    )
+
+
+@pytest.fixture
+def docente_fundamentos():
+    """Fixture: docente que dicta 3.4.069 de noche, con horario fehaciente."""
+    return Docente(
+        docente_id="DOC001",
+        nombre="Ing. Ana Lopez",
+        materias_que_dicta=["3.4.069"],
+        disponibilidad_turnos=["noche"],
+        max_comisiones=2,
+        horario_fehaciente=True,
+    )
+
+
+@pytest.fixture
+def docente_sin_horario():
+    """Fixture: docente sin horario fehaciente (se estima por historico)."""
+    return Docente(
+        docente_id="DOC002",
+        nombre="Dra. Sofia Diaz",
+        materias_que_dicta=[],
+        disponibilidad_turnos=[],
+        max_comisiones=2,
+        horario_fehaciente=False,
+    )
+
+
+@pytest.fixture
+def historico_fundamentos():
+    """Fixture: historico de DOC002 dictando 3.4.069 de noche."""
+    return HistoricoDictado(
+        historico_id="H0001",
+        docente_id="DOC002",
+        docente_nombre="Dra. Sofia Diaz",
+        codigo_materia="3.4.069",
+        nombre_materia="Fundamentos de Informatica",
+        turno="noche",
+        ano=2025,
+        cuatrimestre=1,
+        cantidad_alumnos=30,
     )
