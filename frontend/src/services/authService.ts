@@ -16,6 +16,13 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface CreateUserPayload {
+  username: string;
+  password: string;
+  nombre: string;
+  rol: Rol;
+}
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
@@ -72,4 +79,64 @@ export const authService = {
 
     return response.json();
   },
+
+  async listUsers(token: string): Promise<User[]> {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
+    if (response.status === 403) {
+      throw new Error('No tenés permisos para ver esta sección');
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(detailToMessage(errorData) || 'Error listando usuarios');
+    }
+
+    return response.json();
+  },
+
+  async createUser(token: string, payload: CreateUserPayload): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
+    if (response.status === 403) {
+      throw new Error('No tenés permisos para crear usuarios');
+    }
+    if (response.status === 409) {
+      throw new Error('Ya existe un usuario con ese username');
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(detailToMessage(errorData) || 'Error creando usuario');
+    }
+
+    return response.json();
+  },
 };
+
+// Pydantic devuelve `detail` como array de objetos en errores 422.
+// Acá lo serializamos a algo legible para el usuario.
+function detailToMessage(errorData: unknown): string | null {
+  if (!errorData || typeof errorData !== 'object') return null;
+  const detail = (errorData as { detail?: unknown }).detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d) => (typeof d === 'object' && d && 'msg' in d ? String((d as { msg: unknown }).msg) : String(d)))
+      .join('; ');
+  }
+  return null;
+}
