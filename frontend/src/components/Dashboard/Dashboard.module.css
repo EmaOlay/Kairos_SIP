@@ -14,21 +14,20 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.logo {
-  font-size: 1.8rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: var(--text-primary);
+.logoImg {
+  height: 64px;
+  width: auto;
+  display: block;
 }
 
-.tag {
-  color: var(--accent-cyan);
-  font-size: 0.9rem;
-  vertical-align: middle;
-  background: rgba(0, 242, 255, 0.1);
-  padding: 4px 8px;
-  border-radius: 4px;
-  margin-left: 8px;
+/* El logo es azul marino oscuro: sobre el tema oscuro casi no contrasta, así
+   que en dark le damos un respaldo claro suave para que se lea. En light se
+   muestra tal cual sobre el fondo claro (esta regla no aplica). */
+:root:not([data-theme='light']) .logoImg {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 0 0 1px var(--glass-border), 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .controls {

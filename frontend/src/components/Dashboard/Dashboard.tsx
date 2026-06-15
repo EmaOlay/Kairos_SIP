@@ -5,6 +5,7 @@ import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
 import ThemeToggle from './ThemeToggle';
+import kairosLogo from '../../assets/kairos-logo.png';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
@@ -494,7 +495,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
-        <h1 className={styles.logo}>KAIROS <span className={styles.tag}>ENGINE</span></h1>
+        <img src={kairosLogo} alt="Kairós — Optimización y Planificación Académica" className={styles.logoImg} />
         <div className={styles.controls}>
           <ThemeToggle />
           <select
