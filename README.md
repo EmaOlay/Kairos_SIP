@@ -67,6 +67,59 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 
 ---
 
+## Autenticación y roles
+
+A partir de la versión actual, el dashboard requiere iniciar sesión antes de
+acceder al resto de la aplicación. La autenticación se realiza con usuario y
+contraseña almacenados en la base de datos, y la sesión se mantiene mediante
+un token JWT firmado.
+
+### Roles soportados
+
+- **Docente Funcional** (`docente_funcional`)
+- **Director de Departamento** (`director_departamento`)
+- **Decano** (`decano`)
+
+### Usuarios de prueba (seed)
+
+La migración `0003_usuarios_auth` crea automáticamente tres cuentas de
+demostración. La contraseña inicial coincide con el nombre de usuario y
+debe rotarse antes de cualquier despliegue productivo.
+
+| Usuario     | Contraseña  | Rol                       |
+|-------------|-------------|---------------------------|
+| `docente1`  | `docente1`  | Docente Funcional         |
+| `director1` | `director1` | Director de Departamento  |
+| `decano1`   | `decano1`   | Decano                    |
+
+### Endpoints expuestos
+
+| Método | Ruta                      | Acceso                        | Descripción                                  |
+|--------|---------------------------|-------------------------------|----------------------------------------------|
+| POST   | `/api/v1/auth/login`      | Público                       | Devuelve un token JWT y los datos del usuario. |
+| GET    | `/api/v1/auth/me`         | Cualquier usuario autenticado | Datos del usuario actual.                    |
+| GET    | `/api/v1/users`           | Solo rol `decano`             | Lista todos los usuarios del sistema.        |
+| POST   | `/api/v1/users`           | Solo rol `decano`             | Crea un nuevo usuario.                       |
+
+### Variables de entorno relevantes
+
+- `KAIROS_JWT_SECRET`: clave de firma del token JWT. **Obligatoria** en
+  cualquier entorno distinto de desarrollo. Si falta y `KAIROS_ENV` no es
+  `development`, `dev`, `test` o `testing`, la API no inicia.
+- `KAIROS_ENV`: entorno de ejecución (`development`, `production`, etc.).
+- `KAIROS_CORS_ORIGINS`: lista de orígenes adicionales permitidos por CORS,
+  separados por comas (los orígenes locales habituales ya están incluidos
+  por defecto).
+
+### Notas sobre el almacenamiento de contraseñas
+
+Las contraseñas se almacenan utilizando SHA-256 con una sal aleatoria por
+usuario, en formato `<sal>:<digest>`. Esta primera iteración prioriza la
+simplicidad; para escenarios de producción se recomienda migrar a un
+algoritmo específicamente diseñado para contraseñas, como bcrypt o Argon2.
+
+---
+
 ## Estado del proyecto
 
 ### Completado
@@ -83,6 +136,7 @@ docker-compose run --rm kairos-api alembic revision --autogenerate -m "descripci
 - [x] **Justificación por prescripción**: columna Razón con el motivo de cada decisión (score ≥ mínimo, score bajo, tope presupuestario).
 - [x] **Datos reales**: validado con el plan 1621 de Ingeniería en Informática de UADE.
 - [x] **Dockerización**: entornos listos para desarrollo y demo.
+- [x] **Autenticación con roles**: login con usuario y contraseña almacenados en la base, sesión vía JWT, tres roles (Docente Funcional, Director de Departamento, Decano), guard de acceso al dashboard y endpoint administrativo de gestión de usuarios restringido al rol Decano.
 
 ### Pendientes
 
@@ -134,8 +188,10 @@ kairos_sip/
  │    ├── api/                    # FastAPI app
  │    │    ├── main.py            # Entry point + CORS + routers
  │    │    ├── deps.py            # Dependencias inyectadas (sesión DB, etc.)
- │    │    ├── schemas/           # Modelos Pydantic de request/response
- │    │    └── v1/endpoints/      # Endpoints REST (planes, estudiantes, optimizer, graph)
+ │    │    ├── schemas/           # Modelos Pydantic de request/response (incluye auth)
+ │    │    └── v1/endpoints/      # Endpoints REST (planes, estudiantes, optimizer, graph, auth, users)
+ │    ├── core/
+ │    │    └── auth.py            # Hashing, JWT y dependencias de autenticación / roles
  │    ├── db/                     # SQLAlchemy: modelos ORM, session, repositorios
  │    ├── etl/                    # Ingesta y validación de JSON/CSV (DataIngester)
  │    ├── schemas/                # Modelos de dominio Pydantic (Plan, Materia, Estudiante, Config)
@@ -145,10 +201,12 @@ kairos_sip/
  ├── frontend/                    # Dashboard (React + TypeScript + Vite)
  │    └── src/
  │         ├── components/
+ │         │    ├── Auth/         # Pantalla de login y guard de rutas protegidas
  │         │    ├── Dashboard/    # Layout principal, tabs, panel de configuración
  │         │    ├── Graph/        # Visualizador de correlativas (vis-network)
  │         │    └── Prescriptions/# Tabla de prescripciones rankeadas
- │         ├── services/          # Cliente HTTP del API (kairosService.ts)
+ │         ├── context/           # AuthContext (sesión, token, hook useAuth)
+ │         ├── services/          # Cliente HTTP del API (kairosService.ts, authService.ts)
  │         └── styles/            # Variables CSS globales
  ├── scripts/                     # Utilidades de línea de comandos
  │    ├── run_api.py              # Levantar API local sin Docker

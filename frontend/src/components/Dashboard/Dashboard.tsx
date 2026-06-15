@@ -6,9 +6,12 @@ import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
 import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
+import { useAuth } from '../../context/AuthContext';
+import { rolLabel } from '../../services/authService';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
+  const { user, logout } = useAuth();
   const [planes, setPlanes] = useState<PlanSummary[]>([]);
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>('');
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -520,6 +523,15 @@ const Dashboard: React.FC = () => {
             disabled={loading || bootstrapping || !plan}
           >
             {loading ? 'Procesando...' : 'Prender Motor'}
+          </button>
+          {user && (
+            <div className={styles.userInfo}>
+              <span className={styles.userName}>{user.nombre}</span>
+              <span className={styles.userRole}>{rolLabel(user.rol)}</span>
+            </div>
+          )}
+          <button className={styles.logoutBtn} onClick={logout}>
+            Salir
           </button>
         </div>
       </header>
