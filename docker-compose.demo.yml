@@ -6,10 +6,10 @@ services:
       dockerfile: docker/Dockerfile
     container_name: kairos-demo
     volumes:
-      - ./src:/app/src
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./scripts:/app/scripts
+      - ./src:/app/src:z
+      - ./data:/app/data:z
+      - ./config:/app/config:z
+      - ./scripts:/app/scripts:z
     environment:
       - KAIROS_ENV=demo
       - PYTHONPATH=/app/src
