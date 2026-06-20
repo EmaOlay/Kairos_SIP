@@ -13,6 +13,9 @@ import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  // Solo los roles administrativos configuran y operan el motor.
+  // El docente funcional ve la salida pero no toca palancas.
+  const canConfigure = user?.rol === 'director_departamento' || user?.rol === 'decano';
   const [planes, setPlanes] = useState<PlanSummary[]>([]);
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>('');
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -566,6 +569,7 @@ const Dashboard: React.FC = () => {
       {error && <div className={styles.error}>{error}</div>}
       {info && <div className={styles.info}>{info}</div>}
 
+      {canConfigure && (
       <section className={styles.ingestPanel}>
         <h3 className={styles.configTitle}>Ingesta de datos</h3>
         <div className={styles.ingestRow}>
@@ -614,7 +618,9 @@ const Dashboard: React.FC = () => {
           </span>
         </div>
       </section>
+      )}
 
+      {canConfigure && (
       <section className={styles.configPanel}>
         <h3 className={styles.configTitle}>Panel de Configuración</h3>
         <div className={styles.sliderGroup}>
@@ -666,6 +672,7 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
       </section>
+      )}
 
       <main className={styles.content}>
         <div className={styles.tabs} role="tablist">
