@@ -19,6 +19,7 @@ from kairos.db.models import (
     HistoricoDictadoORM,
     MateriaORM,
     PlanORM,
+    PropuestaGeneradaORM,
     RecursoORM,
     RegistroTrayectoriaORM,
 )
@@ -416,3 +417,59 @@ class HistoricoRepository:
             cuatrimestre=h.cuatrimestre,
             cantidad_alumnos=h.cantidad_alumnos,
         )
+
+
+class PropuestaRepository:
+    """
+    Persistencia del historial de propuestas generadas por el motor.
+
+    Cada llamada al endpoint de optimizacion crea una fila nueva con la
+    config snapshoteada y el payload completo de la respuesta. La lista
+    devuelve solo metadatos (rapido); el detalle carga el JSON entero.
+    """
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def save(
+        self,
+        *,
+        usuario: str,
+        codigo_plan: str,
+        carrera: str,
+        config: dict,
+        propuesta: dict,
+    ) -> PropuestaGeneradaORM:
+        prescripciones = propuesta.get("prescripciones", {}) or {}
+        comisiones_a_abrir = sum(
+            1 for p in prescripciones.values() if p.get("decision") == "ABRIR"
+        )
+
+        row = PropuestaGeneradaORM(
+            usuario=usuario,
+            codigo_plan=codigo_plan,
+            carrera=carrera,
+            comisiones_a_abrir=comisiones_a_abrir,
+            demanda_total=int(propuesta.get("demanda_total", 0)),
+            materias_con_demanda=int(propuesta.get("materias_con_demanda", 0)),
+            config_json=json.dumps(config),
+            propuesta_json=json.dumps(propuesta),
+        )
+        self.session.add(row)
+        self.session.commit()
+        self.session.refresh(row)
+        return row
+
+    def list_resumenes(
+        self, codigo_plan: Optional[str] = None, limit: int = 100
+    ) -> List[PropuestaGeneradaORM]:
+        stmt = select(PropuestaGeneradaORM).order_by(
+            PropuestaGeneradaORM.creada_en.desc()
+        )
+        if codigo_plan:
+            stmt = stmt.where(PropuestaGeneradaORM.codigo_plan == codigo_plan)
+        stmt = stmt.limit(limit)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def get(self, propuesta_id: int) -> Optional[PropuestaGeneradaORM]:
+        return self.session.get(PropuestaGeneradaORM, propuesta_id)

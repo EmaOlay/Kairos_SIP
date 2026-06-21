@@ -5,6 +5,7 @@ Aca definimos que le pedimos al usuario y que le devolvemos.
 Usamos los modelos base de kairos pero los tuneamos para la API.
 """
 
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from kairos.schemas.data_models import (
@@ -37,6 +38,31 @@ class ResponsePrescripcion(BaseModel):
     resumen: str
     metricas_operativas: Optional[Dict[str, Any]] = None
     config_usada: Optional[Dict[str, Any]] = None
+    # Identificador de la propuesta persistida en el historial. Solo se
+    # rellena cuando la corrida fue persistida (endpoint DB-driven).
+    propuesta_id: Optional[int] = None
+
+
+class PropuestaResumen(BaseModel):
+    """Entrada del listado de historial: lo justo para listar sin parsear el payload."""
+    id: int
+    creada_en: datetime
+    usuario: str
+    codigo_plan: str
+    carrera: str
+    comisiones_a_abrir: int
+    demanda_total: int
+    materias_con_demanda: int
+    config_usada: Dict[str, Any]
+
+
+class PropuestaDetalle(BaseModel):
+    """Detalle completo de una propuesta historica: misma forma que ResponsePrescripcion + metadatos."""
+    id: int
+    creada_en: datetime
+    usuario: str
+    codigo_plan: str
+    propuesta: ResponsePrescripcion
 
 
 class ConfigComparativa(BaseModel):

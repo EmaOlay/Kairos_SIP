@@ -3,6 +3,7 @@ Endpoints DB-driven (RF-010): exponen planes y estudiantes desde la DB
 y permiten correr el motor sin que el front mande JSON gigantes.
 """
 
+import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,12 +15,16 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from kairos.api.deps import get_db
+from kairos.api.schemas.auth import UserOut
 from kairos.api.schemas.optimizer import (
     EscenarioReporte,
+    PropuestaDetalle,
+    PropuestaResumen,
     RequestReporteComparativo,
     ResponsePrescripcion,
     ResponseReporteComparativo,
 )
+from kairos.core.auth import get_current_user
 from kairos.core.optimizer import KairosOptimizer
 from kairos.db.models import PlanORM
 from kairos.db.repository import (
@@ -28,6 +33,7 @@ from kairos.db.repository import (
     EstudianteRepository,
     HistoricoRepository,
     PlanRepository,
+    PropuestaRepository,
     RecursoRepository,
 )
 from kairos.schemas.data_models import (
@@ -250,10 +256,13 @@ def procesar_desde_db(
     codigo_plan: str,
     request: ProcessFromDbRequest,
     db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
 ) -> ResponsePrescripcion:
     """
     Levanta el plan y los estudiantes de la DB y corre el motor.
     Equivalente a POST /process pero sin que el front mande el JSON entero.
+    Persiste la propuesta + config en el historial atribuida al usuario
+    autenticado, y devuelve el id en la respuesta.
     """
     optimizer = _construir_optimizer(db, codigo_plan, request.config)
 
@@ -264,7 +273,9 @@ def procesar_desde_db(
     metricas = optimizer.metricas_operativas(prescripciones)
 
     config_efectiva = request.config or ConfiguracionKairos()
-    return ResponsePrescripcion(
+    config_dict = _config_a_dict(config_efectiva)
+
+    propuesta = ResponsePrescripcion(
         carrera=optimizer.plan.nombre_carrera,
         prescripciones=prescripciones,
         cuellos_botella=cuellos,
@@ -272,13 +283,69 @@ def procesar_desde_db(
         materias_con_demanda=len(demanda),
         resumen=resumen,
         metricas_operativas=metricas,
-        config_usada={
-            "weight_tasa_graduacion": config_efectiva.weight_tasa_graduacion,
-            "weight_eficiencia_operativa": config_efectiva.weight_eficiencia_operativa,
-            "min_tasa_ocupacion": config_efectiva.min_tasa_ocupacion,
-            "max_cupos_por_comision": config_efectiva.max_cupos_por_comision,
-            "max_comisiones_a_abrir": config_efectiva.max_comisiones_a_abrir,
-        },
+        config_usada=config_dict,
+    )
+
+    row = PropuestaRepository(db).save(
+        usuario=current_user.username,
+        codigo_plan=codigo_plan,
+        carrera=optimizer.plan.nombre_carrera,
+        config=config_dict,
+        propuesta=propuesta.model_dump(),
+    )
+    propuesta.propuesta_id = row.id
+    return propuesta
+
+
+@router.get("/propuestas", response_model=List[PropuestaResumen])
+def listar_propuestas(
+    codigo_plan: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _current_user: UserOut = Depends(get_current_user),
+) -> List[PropuestaResumen]:
+    """
+    Lista el historial de propuestas generadas (mas reciente primero).
+    Filtra por codigo_plan si viene en la query. El payload completo no
+    se devuelve aca: para eso, GET /propuestas/{id}.
+    """
+    rows = PropuestaRepository(db).list_resumenes(codigo_plan=codigo_plan, limit=limit)
+    return [
+        PropuestaResumen(
+            id=r.id,
+            creada_en=r.creada_en,
+            usuario=r.usuario,
+            codigo_plan=r.codigo_plan,
+            carrera=r.carrera,
+            comisiones_a_abrir=r.comisiones_a_abrir,
+            demanda_total=r.demanda_total,
+            materias_con_demanda=r.materias_con_demanda,
+            config_usada=json.loads(r.config_json),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/propuestas/{propuesta_id}", response_model=PropuestaDetalle)
+def obtener_propuesta(
+    propuesta_id: int,
+    db: Session = Depends(get_db),
+    _current_user: UserOut = Depends(get_current_user),
+) -> PropuestaDetalle:
+    """Devuelve la propuesta completa para mostrarla como si recien hubieras corrido el motor."""
+    row = PropuestaRepository(db).get(propuesta_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Propuesta {propuesta_id} no existe")
+
+    payload = json.loads(row.propuesta_json)
+    # Re-inyecto el id por si el snapshot lo guardo como None (corridas viejas).
+    payload["propuesta_id"] = row.id
+    return PropuestaDetalle(
+        id=row.id,
+        creada_en=row.creada_en,
+        usuario=row.usuario,
+        codigo_plan=row.codigo_plan,
+        propuesta=ResponsePrescripcion(**payload),
     )
 
 

@@ -4,6 +4,7 @@ import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/ka
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
+import HistorialPropuestas from '../Historial/HistorialPropuestas';
 import SettingsModal from '../Settings/SettingsModal';
 import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
@@ -22,8 +23,9 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -257,6 +259,7 @@ const Dashboard: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setHistoricoMeta(null);
     try {
       const res = await kairosService.processFromDb(selectedPlanCode, config);
       setResults(res);
@@ -265,6 +268,36 @@ const Dashboard: React.FC = () => {
       setGraphData(graph);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const abrirPropuestaHistorica = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const detalle = await kairosService.getPropuesta(id);
+      setResults(detalle.propuesta);
+      setHistoricoMeta({
+        id: detalle.id,
+        creada_en: detalle.creada_en,
+        usuario: detalle.usuario,
+      });
+      // Sincronizo el panel de config con la config con la que se generó.
+      const cfg = detalle.propuesta.config_usada;
+      if (cfg) {
+        setConfig({
+          weight_tasa_graduacion: cfg.weight_tasa_graduacion,
+          weight_eficiencia_operativa: cfg.weight_eficiencia_operativa,
+          min_tasa_ocupacion: cfg.min_tasa_ocupacion,
+          max_cupos_por_comision: cfg.max_cupos_por_comision,
+          max_comisiones_a_abrir: cfg.max_comisiones_a_abrir,
+        });
+      }
+      setActiveTab('resultados');
+    } catch (err: any) {
+      setError(err.message || 'Error abriendo la propuesta');
     } finally {
       setLoading(false);
     }
@@ -703,11 +736,29 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'historial'}
+            className={`${styles.tab} ${activeTab === 'historial' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('historial')}
+            disabled={!selectedPlanCode}
+            title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver historial de propuestas'}
+          >
+            Historial
+          </button>
         </div>
 
         {activeTab === 'resultados' && (
           results ? (
             <>
+              {historicoMeta && (
+                <div className={styles.info}>
+                  Estás viendo una propuesta histórica (#{historicoMeta.id}) generada por{' '}
+                  <strong>{historicoMeta.usuario}</strong> el{' '}
+                  {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}. La config
+                  del panel se sincronizó con la usada en esa corrida.
+                </div>
+              )}
               <section className={styles.stats}>
                 <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
                   <span className={styles.statLabel}>Demanda Total</span>
@@ -767,6 +818,12 @@ const Dashboard: React.FC = () => {
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
 
+        {activeTab === 'historial' && selectedPlanCode && (
+          <HistorialPropuestas
+            codigoPlan={selectedPlanCode}
+            onAbrirPropuesta={abrirPropuestaHistorica}
+          />
+        )}
       </main>
 
       {user?.rol === 'decano' && (
