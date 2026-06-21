@@ -77,6 +77,42 @@ export interface ComparativeReport {
   escenarios: ScenarioReport[];
 }
 
+export interface RegistroTrayectoria {
+  codigo_materia: string;
+  nombre_materia: string;
+  estado: 'aprobada' | 'regular' | 'inscripta' | 'pendiente';
+  ano_academico: number;
+  cuatrimestre: number;
+  calificacion?: number | null;
+  fecha_aprobacion?: string | null;
+}
+
+export interface EstudianteTrayectoria {
+  estudiante_id: string;
+  codigo_carrera: string;
+  plan_estudio_id: string;
+  ano_ingreso: number;
+  turno_preferido: string;
+  registros_trayectoria: RegistroTrayectoria[];
+}
+
+export interface Aula {
+  aula_id: string;
+  nombre: string;
+  capacidad: number;
+  sede?: string | null;
+  turnos_disponibles: string[];
+}
+
+export interface Docente {
+  docente_id: string;
+  nombre: string;
+  materias_que_dicta: string[];
+  disponibilidad_turnos: string[];
+  max_comisiones: number;
+  horario_fehaciente: boolean;
+}
+
 export const kairosService = {
   async getConfig(): Promise<KairosConfig> {
     const response = await fetch(`${API_BASE_URL}/config`);
@@ -135,7 +171,7 @@ export const kairosService = {
     return response.json();
   },
 
-  async getEstudiantes(codigoPlan: string): Promise<Student[]> {
+  async getEstudiantes(codigoPlan: string): Promise<EstudianteTrayectoria[]> {
     const response = await fetch(
       `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/estudiantes`
     );
@@ -239,6 +275,22 @@ export const kairosService = {
       throw new Error(errorData.detail || 'Error generando el reporte comparativo');
     }
 
+    return response.json();
+  },
+
+  async getAulas(): Promise<Aula[]> {
+    const response = await fetch(`${API_BASE_URL}/aulas`);
+    if (!response.ok) {
+      throw new Error('Error cargando aulas');
+    }
+    return response.json();
+  },
+
+  async getDocentes(): Promise<Docente[]> {
+    const response = await fetch(`${API_BASE_URL}/docentes`);
+    if (!response.ok) {
+      throw new Error('Error cargando docentes');
+    }
     return response.json();
   },
 };

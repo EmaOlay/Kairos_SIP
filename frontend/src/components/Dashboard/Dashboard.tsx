@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
-import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/kairosService';
+import type { Plan, Student, KairosConfig, PlanSummary, Aula, Docente, EstudianteTrayectoria } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
 import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
+import { useRole } from '../../hooks/useRole';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
+  const CURRENT_ROLE = useRole();
   const [planes, setPlanes] = useState<PlanSummary[]>([]);
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>('');
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<EstudianteTrayectoria[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'detalles'>('resultados');
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,13 @@ const Dashboard: React.FC = () => {
     max_cupos_por_comision: 50,
     max_comisiones_a_abrir: null,
   });
+  const [activeDetallesSubTab, setActiveDetallesSubTab] = useState<'docentes' | 'alumnos' | 'aulas'>(
+    CURRENT_ROLE === 'Docente Funcional' ? 'alumnos' : 'docentes'
+  );
+  const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [aulas, setAulas] = useState<Aula[]>([]);
+  const [loadingDetalles, setLoadingDetalles] = useState(false);
+  const [errorDetalles, setErrorDetalles] = useState<string | null>(null);
 
   useEffect(() => {
     kairosService.getConfig().then(setConfig).catch(() => {});
@@ -82,6 +91,35 @@ const Dashboard: React.FC = () => {
       cancelled = true;
     };
   }, [selectedPlanCode]);
+
+  useEffect(() => {
+    if (activeTab !== 'detalles') return;
+    if (CURRENT_ROLE === 'Docente Funcional' && activeDetallesSubTab === 'docentes') {
+      setActiveDetallesSubTab('alumnos');
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetalles(true);
+    setErrorDetalles(null);
+    (async () => {
+      try {
+        if (activeDetallesSubTab === 'docentes') {
+          const docs = await kairosService.getDocentes();
+          if (!cancelled) setDocentes(docs);
+        } else if (activeDetallesSubTab === 'aulas') {
+          const aus = await kairosService.getAulas();
+          if (!cancelled) setAulas(aus);
+        }
+      } catch (err: any) {
+        if (!cancelled) setErrorDetalles(err.message || 'Error cargando datos de detalles');
+      } finally {
+        if (!cancelled) setLoadingDetalles(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, activeDetallesSubTab, CURRENT_ROLE]);
 
   const refreshPlanes = async (preferCodigo?: string): Promise<PlanSummary[]> => {
     const lista = await kairosService.listPlanes();
@@ -657,6 +695,16 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'detalles'}
+            className={`${styles.tab} ${activeTab === 'detalles' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('detalles')}
+            disabled={!selectedPlanCode}
+            title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver docentes, alumnos y aulas'}
+          >
+            Detalles
+          </button>
         </div>
 
         {activeTab === 'resultados' && (
@@ -719,6 +767,169 @@ const Dashboard: React.FC = () => {
 
         {activeTab === 'reporteria' && selectedPlanCode && (
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
+        )}
+
+        {activeTab === 'detalles' && (
+          <>
+            {errorDetalles && <div className={styles.error}>{errorDetalles}</div>}
+            <div className={styles.subTabs}>
+              {CURRENT_ROLE !== 'Docente Funcional' && (
+                <button
+                  className={`${styles.subTab} ${activeDetallesSubTab === 'docentes' ? styles.subTabActive : ''}`}
+                  onClick={() => setActiveDetallesSubTab('docentes')}
+                >
+                  Docentes
+                </button>
+              )}
+              <button
+                className={`${styles.subTab} ${activeDetallesSubTab === 'alumnos' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveDetallesSubTab('alumnos')}
+              >
+                Alumnos
+              </button>
+              <button
+                className={`${styles.subTab} ${activeDetallesSubTab === 'aulas' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveDetallesSubTab('aulas')}
+              >
+                Aulas
+              </button>
+            </div>
+
+            {loadingDetalles ? (
+              <div className={styles.empty}>
+                <p>Cargando datos...</p>
+              </div>
+            ) : (
+              <>
+                {activeDetallesSubTab === 'docentes' && CURRENT_ROLE !== 'Docente Funcional' && (
+                  docentes.length === 0 ? (
+                    <div className={styles.detailsEmpty}>
+                      <p>No hay docentes cargados en la base de datos.</p>
+                    </div>
+                  ) : (
+                    <table className={styles.detailsTable}>
+                      <thead>
+                        <tr>
+                          <th>Legajo</th>
+                          <th>Nombre</th>
+                          <th>Materias que Dicta</th>
+                          <th>Disponibilidad</th>
+                          <th>Max Comisiones</th>
+                          <th>Horario Fehaciente</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {docentes.map(d => {
+                          const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
+                          const turnosDisplay = d.disponibilidad_turnos.length > 0
+                            ? d.disponibilidad_turnos.map(t => turnoMap[t] || t).join(', ')
+                            : '—';
+                          const materiasDisplay = d.materias_que_dicta.length > 0
+                            ? d.materias_que_dicta.join(', ')
+                            : '—';
+                          return (
+                            <tr key={d.docente_id}>
+                              <td>{d.docente_id}</td>
+                              <td>{d.nombre}</td>
+                              <td>{materiasDisplay}</td>
+                              <td>{turnosDisplay}</td>
+                              <td>{d.max_comisiones}</td>
+                              <td>{d.horario_fehaciente ? '✓' : '✗'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )
+                )}
+
+                {activeDetallesSubTab === 'alumnos' && (
+                  students.length === 0 ? (
+                    <div className={styles.detailsEmpty}>
+                      <p>No hay alumnos cargados para este plan.</p>
+                    </div>
+                  ) : (
+                    <table className={styles.detailsTable}>
+                      <thead>
+                        <tr>
+                          <th>Legajo</th>
+                          <th>Plan</th>
+                          <th>Año Ingreso</th>
+                          <th>Turno Preferido</th>
+                          <th>Materias Aprobadas</th>
+                          <th>Promedio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {students.map(s => {
+                          const aprobadas = s.registros_trayectoria?.filter(r => r.estado === 'aprobada') || [];
+                          const conCalif = aprobadas.filter(r => r.calificacion != null);
+                          const promedio = conCalif.length > 0
+                            ? (conCalif.reduce((acc, r) => acc + (r.calificacion || 0), 0) / conCalif.length).toFixed(2)
+                            : '—';
+                          const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
+                          const turnoDisplay = turnoMap[s.turno_preferido] || s.turno_preferido;
+                          return (
+                            <tr key={s.estudiante_id}>
+                              <td>{s.estudiante_id}</td>
+                              <td>{s.plan_estudio_id}</td>
+                              <td>{s.ano_ingreso}</td>
+                              <td>{turnoDisplay}</td>
+                              <td>{aprobadas.length}</td>
+                              <td>{promedio}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )
+                )}
+
+                {activeDetallesSubTab === 'aulas' && (
+                  aulas.length === 0 ? (
+                    <div className={styles.detailsEmpty}>
+                      <p>No hay aulas cargadas en la base de datos.</p>
+                    </div>
+                  ) : (
+                    <table className={styles.detailsTable}>
+                      <thead>
+                        <tr>
+                          <th>Aula ID</th>
+                          <th>Nombre</th>
+                          <th>Capacidad</th>
+                          <th>Sede</th>
+                          <th>Turnos Disponibles</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aulas.map(a => {
+                          const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
+                          const turnosDisplay = a.turnos_disponibles.length > 0
+                            ? a.turnos_disponibles.map(t => turnoMap[t] || t).join(', ')
+                            : '—';
+                          return (
+                            <tr key={a.aula_id}>
+                              <td>{a.aula_id}</td>
+                              <td>{a.nombre}</td>
+                              <td>{a.capacidad}</td>
+                              <td>{a.sede || '—'}</td>
+                              <td>{turnosDisplay}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )
+                )}
+
+                {activeDetallesSubTab === 'docentes' && CURRENT_ROLE === 'Docente Funcional' && (
+                  <div className={styles.detailsEmpty}>
+                    <p>Mostrando Alumnos (acceso restringido).</p>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </main>
     </div>

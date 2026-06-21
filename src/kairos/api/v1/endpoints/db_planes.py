@@ -242,6 +242,32 @@ def listar_estudiantes(
     return EstudianteRepository(db).list_by_plan(codigo_plan)
 
 
+@router.get("/aulas", response_model=List[Aula])
+def listar_aulas(db: Session = Depends(get_db)) -> List[Aula]:
+    """
+    Lista todas las aulas guardadas, con capacidad y turnos disponibles.
+
+    No requiere filtro por plan: las aulas son globales. Usar para la tab
+    "Detalles > Aulas".
+
+    TODO: agregar verificacion de rol cuando se mergee feature/login-roles.
+    """
+    return AulaRepository(db).list_all()
+
+
+@router.get("/docentes", response_model=List[Docente])
+def listar_docentes(db: Session = Depends(get_db)) -> List[Docente]:
+    """
+    Lista todos los docentes guardados, con materias que dictan y disponibilidad.
+
+    No requiere filtro por plan: los docentes son globales. Usar para la tab
+    "Detalles > Docentes".
+
+    TODO: agregar verificacion de rol cuando se mergee feature/login-roles.
+    """
+    return DocenteRepository(db).list_all()
+
+
 @router.post(
     "/planes/{codigo_plan}/process",
     response_model=ResponsePrescripcion,
