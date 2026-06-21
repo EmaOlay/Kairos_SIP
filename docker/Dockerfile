@@ -34,6 +34,8 @@ COPY config/ ./config/
 RUN useradd -m -u 1000 kairos && \
     chown -R kairos:kairos /app
 
+RUN chmod -R +x ./scripts/
+
 USER kairos
 
 # Health check (opcional)
