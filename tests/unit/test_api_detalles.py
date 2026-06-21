@@ -11,7 +11,14 @@ from sqlalchemy.orm import sessionmaker
 
 from kairos.api.deps import get_db
 from kairos.api.main import app
+from kairos.api.schemas.auth import UserOut
+from kairos.core.auth import get_current_user
 from kairos.db.base import Base
+
+
+def _fake_decano() -> UserOut:
+    """Stub de usuario autenticado con rol que pasa cualquier require_role."""
+    return UserOut(id=1, username="decano-test", nombre="Decano Test", rol="decano")
 
 
 @pytest.fixture
@@ -29,6 +36,9 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = _override_get_db
+    # Bypaseamos auth: require_role depende internamente de get_current_user,
+    # asi que con overridear este alcanza para los tests de listado.
+    app.dependency_overrides[get_current_user] = _fake_decano
     yield TestClient(app)
     app.dependency_overrides.clear()
 

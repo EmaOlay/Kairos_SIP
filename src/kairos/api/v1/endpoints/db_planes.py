@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from kairos.api.deps import get_db
+from kairos.api.schemas.auth import UserOut
+from kairos.core.auth import get_current_user, require_role
 from kairos.api.schemas.optimizer import (
     EscenarioReporte,
     RequestReporteComparativo,
@@ -243,27 +245,29 @@ def listar_estudiantes(
 
 
 @router.get("/aulas", response_model=List[Aula])
-def listar_aulas(db: Session = Depends(get_db)) -> List[Aula]:
+def listar_aulas(
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+) -> List[Aula]:
     """
     Lista todas las aulas guardadas, con capacidad y turnos disponibles.
 
     No requiere filtro por plan: las aulas son globales. Usar para la tab
-    "Detalles > Aulas".
-
-    TODO: agregar verificacion de rol cuando se mergee feature/login-roles.
+    "Detalles > Aulas". Disponible para cualquier usuario autenticado.
     """
     return AulaRepository(db).list_all()
 
 
 @router.get("/docentes", response_model=List[Docente])
-def listar_docentes(db: Session = Depends(get_db)) -> List[Docente]:
+def listar_docentes(
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(require_role("decano", "director_departamento")),
+) -> List[Docente]:
     """
     Lista todos los docentes guardados, con materias que dictan y disponibilidad.
 
     No requiere filtro por plan: los docentes son globales. Usar para la tab
-    "Detalles > Docentes".
-
-    TODO: agregar verificacion de rol cuando se mergee feature/login-roles.
+    "Detalles > Docentes". Restringido a decano y director de departamento.
     """
     return DocenteRepository(db).list_all()
 

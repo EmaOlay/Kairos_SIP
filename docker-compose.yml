@@ -28,12 +28,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./src:/app/src
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./scripts:/app/scripts
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
+      - ./src:/app/src:z
+      - ./data:/app/data:z
+      - ./config:/app/config:z
+      - ./scripts:/app/scripts:z
+      - ./alembic:/app/alembic:z
+      - ./alembic.ini:/app/alembic.ini:z
     environment:
       - KAIROS_ENV=${KAIROS_ENV:-development}
       - PYTHONPATH=/app/src

@@ -14,6 +14,7 @@ from typing import List, Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -23,6 +24,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kairos.db.base import Base
+
+
+# Roles validos para usuarios de Kairos. Se mantienen en snake_case en la DB
+# y la UI mapea a labels lindos ("Docente Funcional", etc).
+ROLES_VALIDOS = ("docente_funcional", "director_departamento", "decano")
 
 
 class PlanORM(Base):
@@ -170,6 +176,25 @@ class DocenteORM(Base):
     disponibilidad_turnos_json: Mapped[Optional[str]] = mapped_column(String(255))
     max_comisiones: Mapped[int] = mapped_column(Integer, default=3)
     horario_fehaciente: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class UsuarioORM(Base):
+    """Usuario del sistema. Login simple (usuario+password) con rol fijo."""
+
+    __tablename__ = "usuarios"
+    __table_args__ = (
+        CheckConstraint(
+            "rol IN ('docente_funcional', 'director_departamento', 'decano')",
+            name="ck_usuarios_rol_valido",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    # Formato: "<salt_hex>:<sha256_hex>"
+    password_hash: Mapped[str] = mapped_column(String(160), nullable=False)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    rol: Mapped[str] = mapped_column(String(32), nullable=False)
 
 
 class HistoricoDictadoORM(Base):

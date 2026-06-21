@@ -278,16 +278,29 @@ export const kairosService = {
     return response.json();
   },
 
-  async getAulas(): Promise<Aula[]> {
-    const response = await fetch(`${API_BASE_URL}/aulas`);
+  async getAulas(token: string): Promise<Aula[]> {
+    const response = await fetch(`${API_BASE_URL}/aulas`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
     if (!response.ok) {
       throw new Error('Error cargando aulas');
     }
     return response.json();
   },
 
-  async getDocentes(): Promise<Docente[]> {
-    const response = await fetch(`${API_BASE_URL}/docentes`);
+  async getDocentes(token: string): Promise<Docente[]> {
+    const response = await fetch(`${API_BASE_URL}/docentes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
+    if (response.status === 403) {
+      throw new Error('No tenés permisos para ver esta sección');
+    }
     if (!response.ok) {
       throw new Error('Error cargando docentes');
     }
