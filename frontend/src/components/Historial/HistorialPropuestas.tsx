@@ -90,28 +90,28 @@ const HistorialPropuestas: React.FC<Props> = ({ codigoPlan, onAbrirPropuesta }) 
                 <th>Comisiones a abrir</th>
                 <th>Demanda total</th>
                 <th>Configuración</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {propuestas.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
-                  <td>{formatFecha(p.creada_en)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className={styles.fechaLink}
+                      onClick={() => onAbrirPropuesta(p.id)}
+                      title="Ver esta propuesta"
+                    >
+                      {formatFecha(p.creada_en)}
+                    </button>
+                  </td>
                   <td>
                     <span className={styles.usuarioBadge}>{p.usuario}</span>
                   </td>
                   <td>{p.comisiones_a_abrir}</td>
                   <td>{p.demanda_total}</td>
                   <td className={styles.configCell}>{formatConfig(p.config_usada)}</td>
-                  <td>
-                    <button
-                      className={styles.openBtn}
-                      onClick={() => onAbrirPropuesta(p.id)}
-                    >
-                      Ver
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>

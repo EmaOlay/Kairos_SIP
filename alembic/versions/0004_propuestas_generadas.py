@@ -1,12 +1,12 @@
 """propuestas_generadas: historial de corridas del motor
 
 Persiste cada corrida del motor con la configuracion usada, el payload
-completo de la propuesta y metadatos resumidos. El usuario queda como
-placeholder ("anonimo") hasta que se mergee el feature de login.
+completo de la propuesta y metadatos resumidos. El usuario que disparo
+la corrida queda registrado para auditoria.
 
-Revision ID: 0003
-Revises: 0002
-Create Date: 2026-06-21
+Revision ID: 0004
+Revises: 0003
+Create Date: 2026-06-22
 
 """
 from typing import Sequence, Union
@@ -15,8 +15,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0003"
-down_revision: Union[str, None] = "0002"
+revision: str = "0004"
+down_revision: Union[str, None] = "0003"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

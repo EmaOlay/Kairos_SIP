@@ -92,18 +92,25 @@
   font-style: italic;
 }
 
-.openBtn {
-  background: var(--accent-cyan);
-  color: var(--bg-primary);
+.fechaLink {
+  background: none;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 700;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-cyan);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
-.openBtn:hover {
-  filter: brightness(1.1);
+.fechaLink:hover {
+  filter: brightness(1.15);
+}
+
+.fechaLink:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .error {
