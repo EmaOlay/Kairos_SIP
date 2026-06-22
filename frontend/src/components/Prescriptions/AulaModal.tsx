@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { kairosService, type Aula } from '../../services/kairosService';
+import React, { useEffect, useRef } from 'react';
 import styles from './AulaModal.module.css';
 
 interface AulaModalProps {
   open: boolean;
   onClose: () => void;
   aulaId: string;
+  aulaNombre: string;
+  capacidad: number;
   demanda: number;
 }
 
@@ -22,52 +22,10 @@ const Seat = ({ numero, ocupado }: { numero: number; ocupado: boolean }) => (
   </div>
 );
 
-const AulaModal: React.FC<AulaModalProps> = ({ open, onClose, aulaId, demanda }) => {
-  const { token } = useAuth();
-  const [aula, setAula] = useState<Aula | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const AulaModal: React.FC<AulaModalProps> = ({ open, onClose, aulaId, aulaNombre, capacidad, demanda }) => {
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // useEffect #1: Fetch data (Bug #3 fix - separated from UI side effects)
-  useEffect(() => {
-    if (!open) return;
-
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (!token) {
-          if (!cancelled) setError('Sesión expirada, volvé a iniciar sesión');
-          return;
-        }
-        const aulas = await kairosService.getAulas(token);
-        if (cancelled) return;
-        const found = aulas.find((a: Aula) => a.aula_id === aulaId);
-        if (!found) {
-          setError(`No se encontró el aula ${aulaId}`);
-          setAula(null);
-        } else {
-          setAula(found);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error al cargar la información del aula');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, aulaId, token]);
-
-  // useEffect #2: UI side effects (body lock, ESC listener, focus management)
   useEffect(() => {
     if (!open) return;
 
@@ -91,23 +49,10 @@ const AulaModal: React.FC<AulaModalProps> = ({ open, onClose, aulaId, demanda })
   if (!open) return null;
 
   const renderContent = () => {
-    if (loading) {
-      return <div className={styles.message}>Cargando...</div>;
-    }
-
-    if (error) {
-      return <div className={styles.message}>{error}</div>;
-    }
-
-    if (!aula) {
-      return null;
-    }
-
-    if (aula.capacidad === 0) {
+    if (capacidad === 0) {
       return <div className={styles.message}>Esta aula no tiene capacidad configurada.</div>;
     }
 
-    const capacidad = aula.capacidad;
     const fullRows = Math.floor(capacidad / SEATS_PER_ROW);
     const remainder = capacidad % SEATS_PER_ROW;
     const ocupados = Math.min(demanda, capacidad);
@@ -172,18 +117,22 @@ const AulaModal: React.FC<AulaModalProps> = ({ open, onClose, aulaId, demanda })
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="aula-modal-title">
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div className={styles.overlay} onClick={onClose}>
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="aula-modal-title"
+      >
         <header className={styles.modalHeader}>
           <div>
             <h2 id="aula-modal-title" className={styles.modalTitle}>
-              {aula ? `Aula ${aula.nombre} — ${aula.aula_id}` : `Aula ${aulaId}`}
+              Aula {aulaNombre}
             </h2>
-            {aula && (
-              <p className={styles.modalSubtitle}>
-                Capacidad: {aula.capacidad} | Asignados: {demanda} | Sede: {aula.sede || 'No especificada'}
-              </p>
-            )}
+            <p className={styles.modalSubtitle}>
+              ID: {aulaId} | Capacidad: {capacidad} | Asignados: {demanda}
+            </p>
           </div>
           <button
             ref={closeBtnRef}

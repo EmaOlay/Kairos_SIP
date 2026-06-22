@@ -13,6 +13,8 @@ interface Prescription {
   score: number;
   desbloquea: number;
   aula?: string;
+  aula_id?: string | null;
+  capacidad_aula?: number | null;
   docente?: string;
   bajo_cupo?: boolean;
 }
@@ -32,7 +34,12 @@ const turnoLabel: Record<string, string> = {
 const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, weightCascada, weightRentabilidad }) => {
   const items = Object.values(prescriptions).sort((a, b) => b.score - a.score);
   const [aulaModalOpen, setAulaModalOpen] = useState(false);
-  const [selectedAula, setSelectedAula] = useState<{ id: string; demanda: number } | null>(null);
+  const [selectedAula, setSelectedAula] = useState<{
+    aulaId: string;
+    aulaNombre: string;
+    capacidad: number;
+    demanda: number;
+  } | null>(null);
 
   const closeAulaModal = useCallback(() => {
     setAulaModalOpen(false);
@@ -80,11 +87,16 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
                   <td className={styles.name}>{item.nombre}</td>
                   <td className={styles.turno}>{turnoLabel[item.turno] || item.turno}</td>
                   <td className={styles.turno}>
-                    {item.aula && item.decision === 'ABRIR' ? (
+                    {item.aula && item.decision === 'ABRIR' && item.aula_id && item.capacidad_aula ? (
                       <button
                         className={styles.aulaLink}
                         onClick={() => {
-                          setSelectedAula({ id: item.aula!, demanda: item.demanda });
+                          setSelectedAula({
+                            aulaId: item.aula_id!,
+                            aulaNombre: item.aula!,
+                            capacidad: item.capacidad_aula!,
+                            demanda: item.demanda,
+                          });
                           setAulaModalOpen(true);
                         }}
                         aria-label={`Ver diagrama del aula ${item.aula}`}
@@ -125,7 +137,9 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
         <AulaModal
           open={aulaModalOpen}
           onClose={closeAulaModal}
-          aulaId={selectedAula.id}
+          aulaId={selectedAula.aulaId}
+          aulaNombre={selectedAula.aulaNombre}
+          capacidad={selectedAula.capacidad}
           demanda={selectedAula.demanda}
         />
       )}
