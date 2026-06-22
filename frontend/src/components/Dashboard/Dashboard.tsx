@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<EstudianteTrayectoria[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'detalles' | 'historial' | 'explorar'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial' | 'explorar'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string } | null>(null);
   const [publicada, setPublicada] = useState<boolean>(false);
@@ -45,9 +45,7 @@ const Dashboard: React.FC = () => {
     max_cupos_por_comision: 50,
     max_comisiones_a_abrir: null,
   });
-  const [activeDetallesSubTab, setActiveDetallesSubTab] = useState<'docentes' | 'alumnos' | 'aulas'>(
-    canViewDocentes ? 'docentes' : 'alumnos'
-  );
+  const [activeExplorarSubTab, setActiveExplorarSubTab] = useState<'propuestas' | 'docentes' | 'alumnos' | 'aulas'>('propuestas');
 
   useEffect(() => {
     kairosService.getConfig().then(setConfig).catch(() => {});
@@ -111,10 +109,10 @@ const Dashboard: React.FC = () => {
   }, [selectedPlanCode]);
 
   useEffect(() => {
-    if (activeTab === 'detalles' && !canViewDocentes && activeDetallesSubTab === 'docentes') {
-      setActiveDetallesSubTab('alumnos');
+    if (activeTab === 'explorar' && !canViewDocentes && activeExplorarSubTab === 'docentes') {
+      setActiveExplorarSubTab('propuestas');
     }
-  }, [activeTab, activeDetallesSubTab, canViewDocentes]);
+  }, [activeTab, activeExplorarSubTab, canViewDocentes]);
 
   const refreshPlanes = async (preferCodigo?: string): Promise<PlanSummary[]> => {
     const lista = await kairosService.listPlanes();
@@ -777,16 +775,6 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'detalles'}
-            className={`${styles.tab} ${activeTab === 'detalles' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('detalles')}
-            disabled={!selectedPlanCode}
-            title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver docentes, alumnos y aulas'}
-          >
-            Detalles
-          </button>
           {canConfigure && (
             <button
               role="tab"
@@ -905,49 +893,6 @@ const Dashboard: React.FC = () => {
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
 
-        {activeTab === 'detalles' && (
-          <>
-            <div className={styles.subTabs}>
-              {canViewDocentes && (
-                <button
-                  className={`${styles.subTab} ${activeDetallesSubTab === 'docentes' ? styles.subTabActive : ''}`}
-                  onClick={() => setActiveDetallesSubTab('docentes')}
-                >
-                  Docentes
-                </button>
-              )}
-              <button
-                className={`${styles.subTab} ${activeDetallesSubTab === 'alumnos' ? styles.subTabActive : ''}`}
-                onClick={() => setActiveDetallesSubTab('alumnos')}
-              >
-                Alumnos
-              </button>
-              <button
-                className={`${styles.subTab} ${activeDetallesSubTab === 'aulas' ? styles.subTabActive : ''}`}
-                onClick={() => setActiveDetallesSubTab('aulas')}
-              >
-                Aulas
-              </button>
-            </div>
-
-            {canViewDocentes && token && (
-              <div style={{ display: activeDetallesSubTab === 'docentes' ? 'block' : 'none' }}>
-                <DocentesTab token={token} />
-              </div>
-            )}
-
-            <div style={{ display: activeDetallesSubTab === 'alumnos' ? 'block' : 'none' }}>
-              <AlumnosTab students={students} />
-            </div>
-
-            {token && (
-              <div style={{ display: activeDetallesSubTab === 'aulas' ? 'block' : 'none' }}>
-                <AulasTab token={token} />
-              </div>
-            )}
-          </>
-        )}
-
         {activeTab === 'historial' && selectedPlanCode && (
           <HistorialPropuestas
             codigoPlan={selectedPlanCode}
@@ -956,12 +901,61 @@ const Dashboard: React.FC = () => {
         )}
 
         {activeTab === 'explorar' && (
-          <HistorialPropuestas
-            onAbrirPropuesta={abrirPropuestaHistorica}
-            titulo="Propuestas publicadas"
-            hint="Explorá propuestas compartidas por otros usuarios y por vos."
-            fetcher={kairosService.listarPropuestasPublicadas}
-          />
+          <>
+            <div className={styles.subTabs}>
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'propuestas' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('propuestas')}
+              >
+                Propuestas
+              </button>
+              {canViewDocentes && (
+                <button
+                  className={`${styles.subTab} ${activeExplorarSubTab === 'docentes' ? styles.subTabActive : ''}`}
+                  onClick={() => setActiveExplorarSubTab('docentes')}
+                >
+                  Docentes
+                </button>
+              )}
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'alumnos' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('alumnos')}
+              >
+                Alumnos
+              </button>
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'aulas' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('aulas')}
+              >
+                Aulas
+              </button>
+            </div>
+
+            <div style={{ display: activeExplorarSubTab === 'propuestas' ? 'block' : 'none' }}>
+              <HistorialPropuestas
+                onAbrirPropuesta={abrirPropuestaHistorica}
+                titulo="Propuestas publicadas"
+                hint="Explorá propuestas compartidas por otros usuarios y por vos."
+                fetcher={kairosService.listarPropuestasPublicadas}
+              />
+            </div>
+
+            {canViewDocentes && token && (
+              <div style={{ display: activeExplorarSubTab === 'docentes' ? 'block' : 'none' }}>
+                <DocentesTab token={token} />
+              </div>
+            )}
+
+            <div style={{ display: activeExplorarSubTab === 'alumnos' ? 'block' : 'none' }}>
+              <AlumnosTab students={students} />
+            </div>
+
+            {token && (
+              <div style={{ display: activeExplorarSubTab === 'aulas' ? 'block' : 'none' }}>
+                <AulasTab token={token} />
+              </div>
+            )}
+          </>
         )}
       </main>
 
