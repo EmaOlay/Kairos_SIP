@@ -3,8 +3,11 @@ import { kairosService, type PropuestaResumen } from '../../services/kairosServi
 import styles from './HistorialPropuestas.module.css';
 
 interface Props {
-  codigoPlan: string;
+  codigoPlan?: string;
   onAbrirPropuesta: (id: number) => void;
+  titulo?: string;
+  hint?: string;
+  fetcher?: (codigoPlan?: string) => Promise<PropuestaResumen[]>;
 }
 
 const formatFecha = (iso: string): string => {
@@ -34,7 +37,13 @@ const formatConfig = (config: Record<string, any>): string => {
   );
 };
 
-const HistorialPropuestas: React.FC<Props> = ({ codigoPlan, onAbrirPropuesta }) => {
+const HistorialPropuestas: React.FC<Props> = ({
+  codigoPlan,
+  onAbrirPropuesta,
+  titulo = 'Historial de propuestas',
+  hint = 'Cada vez que prendés el motor, la propuesta queda registrada con su config.',
+  fetcher = kairosService.listarPropuestas,
+}) => {
   const [propuestas, setPropuestas] = useState<PropuestaResumen[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +52,7 @@ const HistorialPropuestas: React.FC<Props> = ({ codigoPlan, onAbrirPropuesta }) 
     setLoading(true);
     setError(null);
     try {
-      const lista = await kairosService.listarPropuestas(codigoPlan);
+      const lista = await fetcher(codigoPlan);
       setPropuestas(lista);
     } catch (err: any) {
       setError(err.message || 'Error cargando historial');
@@ -53,9 +62,7 @@ const HistorialPropuestas: React.FC<Props> = ({ codigoPlan, onAbrirPropuesta }) 
   };
 
   useEffect(() => {
-    if (codigoPlan) {
-      cargar();
-    }
+    cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codigoPlan]);
 
@@ -63,10 +70,8 @@ const HistorialPropuestas: React.FC<Props> = ({ codigoPlan, onAbrirPropuesta }) 
     <div className={styles.wrapper}>
       <div className={styles.toolbar}>
         <div>
-          <h3 className={styles.title}>Historial de propuestas</h3>
-          <span className={styles.hint}>
-            Cada vez que prendés el motor, la propuesta queda registrada con su config.
-          </span>
+          <h3 className={styles.title}>{titulo}</h3>
+          <span className={styles.hint}>{hint}</span>
         </div>
         <button className={styles.refreshBtn} onClick={cargar} disabled={loading}>
           {loading ? 'Cargando…' : '↻ Refrescar'}

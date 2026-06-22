@@ -461,15 +461,35 @@ class PropuestaRepository:
         return row
 
     def list_resumenes(
-        self, codigo_plan: Optional[str] = None, limit: int = 100
+        self, codigo_plan: Optional[str] = None, limit: int = 100, usuario: Optional[str] = None
     ) -> List[PropuestaGeneradaORM]:
         stmt = select(PropuestaGeneradaORM).order_by(
             PropuestaGeneradaORM.creada_en.desc()
         )
         if codigo_plan:
             stmt = stmt.where(PropuestaGeneradaORM.codigo_plan == codigo_plan)
+        if usuario:
+            stmt = stmt.where(PropuestaGeneradaORM.usuario == usuario)
         stmt = stmt.limit(limit)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_publicadas(self, limit: int = 100) -> List[PropuestaGeneradaORM]:
+        stmt = (
+            select(PropuestaGeneradaORM)
+            .where(PropuestaGeneradaORM.publicada == True)
+            .order_by(PropuestaGeneradaORM.creada_en.desc())
+            .limit(limit)
+        )
         return list(self.session.execute(stmt).scalars().all())
 
     def get(self, propuesta_id: int) -> Optional[PropuestaGeneradaORM]:
         return self.session.get(PropuestaGeneradaORM, propuesta_id)
+
+    def set_publicada(self, propuesta_id: int, publicada: bool) -> Optional[PropuestaGeneradaORM]:
+        row = self.session.get(PropuestaGeneradaORM, propuesta_id)
+        if row is None:
+            return None
+        row.publicada = publicada
+        self.session.commit()
+        self.session.refresh(row)
+        return row

@@ -20,6 +20,7 @@ from kairos.api.schemas.optimizer import (
     EscenarioReporte,
     PropuestaDetalle,
     PropuestaResumen,
+    PublicacionRequest,
     RequestReporteComparativo,
     ResponsePrescripcion,
     ResponseReporteComparativo,
@@ -302,14 +303,44 @@ def listar_propuestas(
     codigo_plan: Optional[str] = None,
     limit: int = 100,
     db: Session = Depends(get_db),
-    _current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
 ) -> List[PropuestaResumen]:
     """
     Lista el historial de propuestas generadas (mas reciente primero).
     Filtra por codigo_plan si viene en la query. El payload completo no
     se devuelve aca: para eso, GET /propuestas/{id}.
+    Solo devuelve las propuestas del usuario autenticado.
     """
-    rows = PropuestaRepository(db).list_resumenes(codigo_plan=codigo_plan, limit=limit)
+    rows = PropuestaRepository(db).list_resumenes(
+        codigo_plan=codigo_plan, limit=limit, usuario=current_user.username
+    )
+    return [
+        PropuestaResumen(
+            id=r.id,
+            creada_en=r.creada_en,
+            usuario=r.usuario,
+            codigo_plan=r.codigo_plan,
+            carrera=r.carrera,
+            comisiones_a_abrir=r.comisiones_a_abrir,
+            demanda_total=r.demanda_total,
+            materias_con_demanda=r.materias_con_demanda,
+            config_usada=json.loads(r.config_json),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/propuestas/publicadas", response_model=List[PropuestaResumen])
+def listar_propuestas_publicadas(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _current_user: UserOut = Depends(get_current_user),
+) -> List[PropuestaResumen]:
+    """
+    Lista las propuestas publicadas (mas reciente primero).
+    Devuelve todas las publicadas, incluyendo las del usuario actual.
+    """
+    rows = PropuestaRepository(db).list_publicadas(limit=limit)
     return [
         PropuestaResumen(
             id=r.id,
@@ -330,12 +361,21 @@ def listar_propuestas(
 def obtener_propuesta(
     propuesta_id: int,
     db: Session = Depends(get_db),
-    _current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
 ) -> PropuestaDetalle:
-    """Devuelve la propuesta completa para mostrarla como si recien hubieras corrido el motor."""
+    """
+    Devuelve la propuesta completa para mostrarla como si recien hubieras corrido el motor.
+    Policy: 200 si es del current_user O está publicada; 403 en otro caso; 404 si no existe.
+    """
     row = PropuestaRepository(db).get(propuesta_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Propuesta {propuesta_id} no existe")
+
+    if row.usuario != current_user.username and not row.publicada:
+        raise HTTPException(
+            status_code=403,
+            detail="No tenés permiso para ver esta propuesta (privada de otro usuario)",
+        )
 
     payload = json.loads(row.propuesta_json)
     # Re-inyecto el id por si el snapshot lo guardo como None (corridas viejas).
@@ -345,8 +385,35 @@ def obtener_propuesta(
         creada_en=row.creada_en,
         usuario=row.usuario,
         codigo_plan=row.codigo_plan,
+        publicada=row.publicada,
         propuesta=ResponsePrescripcion(**payload),
     )
+
+
+@router.patch("/propuestas/{propuesta_id}/publicacion")
+def toggle_publicacion(
+    propuesta_id: int,
+    request: PublicacionRequest,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+) -> dict:
+    """
+    Cambia el estado de publicacion de una propuesta.
+    Solo el autor puede cambiar su estado de publicacion.
+    """
+    repo = PropuestaRepository(db)
+    row = repo.get(propuesta_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Propuesta {propuesta_id} no existe")
+
+    if row.usuario != current_user.username:
+        raise HTTPException(
+            status_code=403,
+            detail="No tenés permiso para modificar esta propuesta (no sos el autor)",
+        )
+
+    updated = repo.set_publicada(propuesta_id, request.publicada)
+    return {"id": updated.id, "publicada": updated.publicada}
 
 
 def _config_a_dict(config: ConfiguracionKairos) -> dict:

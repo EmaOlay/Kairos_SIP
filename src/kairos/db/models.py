@@ -242,3 +242,5 @@ class PropuestaGeneradaORM(Base):
     # Snapshot del input y del output (JSON-string para portabilidad).
     config_json: Mapped[str] = mapped_column(String, nullable=False)
     propuesta_json: Mapped[str] = mapped_column(String, nullable=False)
+
+    publicada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

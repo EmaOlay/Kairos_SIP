@@ -62,6 +62,7 @@ class PropuestaDetalle(BaseModel):
     creada_en: datetime
     usuario: str
     codigo_plan: str
+    publicada: bool
     propuesta: ResponsePrescripcion
 
 
@@ -90,3 +91,8 @@ class ResponseReporteComparativo(BaseModel):
     """Comparativa de escenarios para alimentar los gráficos del front."""
     carrera: str
     escenarios: List[EscenarioReporte]
+
+
+class PublicacionRequest(BaseModel):
+    """Request para marcar una propuesta como publicada o privada."""
+    publicada: bool

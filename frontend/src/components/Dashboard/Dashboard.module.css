@@ -495,3 +495,30 @@
   filter: brightness(1.05);
 }
 
+.publicarBtn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.15);
+}
+
+.publicarBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.25);
+  filter: brightness(1.05);
+}
+
+.publicarBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

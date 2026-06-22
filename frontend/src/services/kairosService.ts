@@ -101,6 +101,7 @@ export interface PropuestaDetalle {
   creada_en: string;
   usuario: string;
   codigo_plan: string;
+  publicada: boolean;
   propuesta: any;
 }
 
@@ -287,6 +288,32 @@ export const kairosService = {
       throw new Error(errorData.detail || 'Error generando el reporte comparativo');
     }
 
+    return response.json();
+  },
+
+  async listarPropuestasPublicadas(): Promise<PropuestaResumen[]> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/publicadas`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Error listando propuestas publicadas');
+    }
+    return response.json();
+  },
+
+  async togglePublicacion(
+    id: number,
+    publicada: boolean
+  ): Promise<{ id: number; publicada: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/${id}/publicacion`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ publicada }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error actualizando publicación');
+    }
     return response.json();
   },
 };

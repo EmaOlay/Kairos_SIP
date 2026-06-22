@@ -23,9 +23,10 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial' | 'explorar'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string } | null>(null);
+  const [publicada, setPublicada] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,6 +285,7 @@ const Dashboard: React.FC = () => {
         creada_en: detalle.creada_en,
         usuario: detalle.usuario,
       });
+      setPublicada(detalle.publicada);
       // Sincronizo el panel de config con la config con la que se generó.
       const cfg = detalle.propuesta.config_usada;
       if (cfg) {
@@ -329,6 +331,21 @@ const Dashboard: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
       setError(err.message || 'Error exportando propuesta a Excel');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTogglePublicacion = async () => {
+    if (!historicoMeta) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await kairosService.togglePublicacion(historicoMeta.id, !publicada);
+      setPublicada(resp.publicada);
+      setInfo(resp.publicada ? 'Propuesta publicada correctamente.' : 'Propuesta despublicada.');
+    } catch (err: any) {
+      setError(err.message || 'Error cambiando el estado de publicación');
     } finally {
       setLoading(false);
     }
@@ -746,6 +763,15 @@ const Dashboard: React.FC = () => {
           >
             Historial
           </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'explorar'}
+            className={`${styles.tab} ${activeTab === 'explorar' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('explorar')}
+            title="Explorar propuestas publicadas por otros usuarios"
+          >
+            Explorar
+          </button>
         </div>
 
         {activeTab === 'resultados' && (
@@ -753,10 +779,20 @@ const Dashboard: React.FC = () => {
             <>
               {historicoMeta && (
                 <div className={styles.info}>
-                  Estás viendo una propuesta histórica (#{historicoMeta.id}) generada por{' '}
-                  <strong>{historicoMeta.usuario}</strong> el{' '}
-                  {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}. La config
-                  del panel se sincronizó con la usada en esa corrida.
+                  {historicoMeta.usuario === user?.username ? (
+                    <>
+                      Estás viendo una propuesta histórica (#{historicoMeta.id}) generada por{' '}
+                      <strong>{historicoMeta.usuario}</strong> el{' '}
+                      {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}. La config
+                      del panel se sincronizó con la usada en esa corrida.
+                    </>
+                  ) : (
+                    <>
+                      Estás viendo una propuesta publicada por{' '}
+                      <strong>{historicoMeta.usuario}</strong> el{' '}
+                      {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}.
+                    </>
+                  )}
                 </div>
               )}
               <section className={styles.stats}>
@@ -796,6 +832,15 @@ const Dashboard: React.FC = () => {
                 <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
                   📄 Exportar propuesta a PDF (Imprimir)
                 </button>
+                {historicoMeta && historicoMeta.usuario === user?.username && (
+                  <button
+                    className={styles.publicarBtn}
+                    onClick={handleTogglePublicacion}
+                    disabled={loading}
+                  >
+                    {publicada ? '🔓 Despublicar' : '🔒 Publicar'}
+                  </button>
+                )}
               </div>
 
               <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
@@ -822,6 +867,15 @@ const Dashboard: React.FC = () => {
           <HistorialPropuestas
             codigoPlan={selectedPlanCode}
             onAbrirPropuesta={abrirPropuestaHistorica}
+          />
+        )}
+
+        {activeTab === 'explorar' && (
+          <HistorialPropuestas
+            onAbrirPropuesta={abrirPropuestaHistorica}
+            titulo="Propuestas publicadas"
+            hint="Explorá propuestas compartidas por otros usuarios y por vos."
+            fetcher={kairosService.listarPropuestasPublicadas}
           />
         )}
       </main>
