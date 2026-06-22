@@ -63,9 +63,10 @@ class TestListarAulas:
         assert r.status_code == 200
         data = r.json()
         assert len(data) == 2
-        assert data[0]["aula_id"] == "A1"
-        assert data[0]["capacidad"] == 40
-        assert data[1]["turnos_disponibles"] == ["noche"]
+        a1 = next(a for a in data if a["aula_id"] == "A1")
+        a2 = next(a for a in data if a["aula_id"] == "A2")
+        assert a1["capacidad"] == 40
+        assert a2["turnos_disponibles"] == ["noche"]
 
 
 class TestListarDocentes:
@@ -101,6 +102,7 @@ class TestListarDocentes:
         assert r.status_code == 200
         data = r.json()
         assert len(data) == 2
-        assert data[0]["docente_id"] == "D1"
-        assert data[0]["materias_que_dicta"] == ["3.4.069"]
-        assert data[1]["horario_fehaciente"] is False
+        d1 = next(d for d in data if d["docente_id"] == "D1")
+        d2 = next(d for d in data if d["docente_id"] == "D2")
+        assert d1["materias_que_dicta"] == ["3.4.069"]
+        assert d2["horario_fehaciente"] is False

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
-import type { Plan, KairosConfig, PlanSummary, Aula, Docente, EstudianteTrayectoria } from '../../services/kairosService';
+import type { Plan, KairosConfig, PlanSummary, EstudianteTrayectoria } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
@@ -9,7 +9,10 @@ import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { rolLabel } from '../../services/authService';
-import { usePaginatedTable } from '../../hooks/usePaginatedTable';
+import DocentesTab from '../Detalles/DocentesTab';
+import AlumnosTab from '../Detalles/AlumnosTab';
+import AulasTab from '../Detalles/AulasTab';
+import { formatTurno } from '../../utils/turnos';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
@@ -42,13 +45,6 @@ const Dashboard: React.FC = () => {
   const [activeDetallesSubTab, setActiveDetallesSubTab] = useState<'docentes' | 'alumnos' | 'aulas'>(
     canViewDocentes ? 'docentes' : 'alumnos'
   );
-  const [docentes, setDocentes] = useState<Docente[]>([]);
-  const [aulas, setAulas] = useState<Aula[]>([]);
-  const [loadingDetalles, setLoadingDetalles] = useState(false);
-  const [errorDetalles, setErrorDetalles] = useState<string | null>(null);
-  const [docentesFilters, setDocentesFilters] = useState({ search: '', turno: 'todos', horarioFehaciente: 'todos', page: 1, pageSize: 25 });
-  const [alumnosFilters, setAlumnosFilters] = useState({ search: '', turno: 'todos', anoIngreso: 'todos', page: 1, pageSize: 25 });
-  const [aulasFilters, setAulasFilters] = useState({ search: '', sede: 'todas', turno: 'todos', page: 1, pageSize: 25 });
 
   useEffect(() => {
     kairosService.getConfig().then(setConfig).catch(() => {});
@@ -105,34 +101,10 @@ const Dashboard: React.FC = () => {
   }, [selectedPlanCode]);
 
   useEffect(() => {
-    if (activeTab !== 'detalles') return;
-    if (!canViewDocentes && activeDetallesSubTab === 'docentes') {
+    if (activeTab === 'detalles' && !canViewDocentes && activeDetallesSubTab === 'docentes') {
       setActiveDetallesSubTab('alumnos');
-      return;
     }
-    if (!token) return;
-    let cancelled = false;
-    setLoadingDetalles(true);
-    setErrorDetalles(null);
-    (async () => {
-      try {
-        if (activeDetallesSubTab === 'docentes') {
-          const docs = await kairosService.getDocentes(token);
-          if (!cancelled) setDocentes(docs);
-        } else if (activeDetallesSubTab === 'aulas') {
-          const aus = await kairosService.getAulas(token);
-          if (!cancelled) setAulas(aus);
-        }
-      } catch (err: any) {
-        if (!cancelled) setErrorDetalles(err.message || 'Error cargando datos de detalles');
-      } finally {
-        if (!cancelled) setLoadingDetalles(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, activeDetallesSubTab, canViewDocentes, token]);
+  }, [activeTab, activeDetallesSubTab, canViewDocentes]);
 
   const refreshPlanes = async (preferCodigo?: string): Promise<PlanSummary[]> => {
     const lista = await kairosService.listPlanes();
@@ -284,91 +256,6 @@ const Dashboard: React.FC = () => {
   const handleDocentesUpload = (e: React.ChangeEvent<HTMLInputElement>) =>
     handleListUpload(e, { tipo: 'docentes', idKey: 'docente_id', ingest: kairosService.ingestarDocentes });
 
-  const handleDocentesFilterChange = (key: string, value: any) => {
-    setDocentesFilters(prev => ({
-      ...prev,
-      [key]: value,
-      page: key === 'page' ? value : 1,
-    }));
-  };
-
-  const handleAlumnosFilterChange = (key: string, value: any) => {
-    setAlumnosFilters(prev => ({
-      ...prev,
-      [key]: value,
-      page: key === 'page' ? value : 1,
-    }));
-  };
-
-  const handleAulasFilterChange = (key: string, value: any) => {
-    setAulasFilters(prev => ({
-      ...prev,
-      [key]: value,
-      page: key === 'page' ? value : 1,
-    }));
-  };
-
-  const docentesFilterFn = useCallback((d: Docente) => {
-    const searchLower = docentesFilters.search.toLowerCase();
-    const matchesSearch = searchLower === '' ||
-      d.docente_id.toLowerCase().includes(searchLower) ||
-      d.nombre.toLowerCase().includes(searchLower);
-    const matchesTurno = docentesFilters.turno === 'todos' ||
-      d.disponibilidad_turnos.includes(docentesFilters.turno);
-    const matchesHorario = docentesFilters.horarioFehaciente === 'todos' ||
-      (docentesFilters.horarioFehaciente === 'si' ? d.horario_fehaciente : !d.horario_fehaciente);
-    return matchesSearch && matchesTurno && matchesHorario;
-  }, [docentesFilters]);
-
-  const alumnosFilterFn = useCallback((s: EstudianteTrayectoria) => {
-    const searchLower = alumnosFilters.search.toLowerCase();
-    const matchesSearch = searchLower === '' || s.estudiante_id.toLowerCase().includes(searchLower);
-    const matchesTurno = alumnosFilters.turno === 'todos' || s.turno_preferido === alumnosFilters.turno;
-    const matchesAno = alumnosFilters.anoIngreso === 'todos' || String(s.ano_ingreso) === alumnosFilters.anoIngreso;
-    return matchesSearch && matchesTurno && matchesAno;
-  }, [alumnosFilters]);
-
-  const aulasFilterFn = useCallback((a: Aula) => {
-    const searchLower = aulasFilters.search.toLowerCase();
-    const matchesSearch = searchLower === '' ||
-      a.aula_id.toLowerCase().includes(searchLower) ||
-      a.nombre.toLowerCase().includes(searchLower);
-    const matchesSede = aulasFilters.sede === 'todas' || a.sede === aulasFilters.sede;
-    const matchesTurno = aulasFilters.turno === 'todos' || a.turnos_disponibles.includes(aulasFilters.turno);
-    return matchesSearch && matchesSede && matchesTurno;
-  }, [aulasFilters]);
-
-  const docentesPaginated = usePaginatedTable({
-    items: docentes,
-    filterFn: docentesFilterFn,
-    page: docentesFilters.page,
-    pageSize: docentesFilters.pageSize,
-  });
-
-  const alumnosPaginated = usePaginatedTable({
-    items: students,
-    filterFn: alumnosFilterFn,
-    page: alumnosFilters.page,
-    pageSize: alumnosFilters.pageSize,
-  });
-
-  const aulasPaginated = usePaginatedTable({
-    items: aulas,
-    filterFn: aulasFilterFn,
-    page: aulasFilters.page,
-    pageSize: aulasFilters.pageSize,
-  });
-
-  const anosIngreso = useMemo(() => {
-    return Array.from(new Set(students.map(s => s.ano_ingreso)))
-      .filter(a => a != null)
-      .sort((a, b) => b - a);
-  }, [students]);
-
-  const sedes = useMemo(() => {
-    const valid = aulas.map(a => a.sede).filter((s): s is string => s != null);
-    return Array.from(new Set(valid)).sort((a, b) => a.localeCompare(b, 'es'));
-  }, [aulas]);
 
   const handleWeightChange = (graduacion: number) => {
     setConfig(prev => ({
@@ -460,14 +347,13 @@ const Dashboard: React.FC = () => {
       const isRisk = item.bajo_cupo;
       const rowStyle = isRisk ? 'background-color: #fff8e1; color: #b78103;' : '';
       const badgeHtml = isRisk ? '<span class="warning-badge">⚠️ Riesgo de baja</span>' : 'Normal';
-      const turnoLabel: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
-      
+
       return `
         <tr style="${rowStyle}">
           <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
           <td><strong>${item.codigo}</strong></td>
           <td>${item.nombre}</td>
-          <td style="text-align: center;">${turnoLabel[item.turno] || item.turno}</td>
+          <td style="text-align: center;">${formatTurno(item.turno)}</td>
           <td style="text-align: center;">${item.aula || '-'}</td>
           <td>${item.docente || '-'}</td>
           <td style="text-align: right; font-weight: bold;">${item.demanda}</td>
@@ -908,7 +794,6 @@ const Dashboard: React.FC = () => {
 
         {activeTab === 'detalles' && (
           <>
-            {errorDetalles && <div className={styles.error}>{errorDetalles}</div>}
             <div className={styles.subTabs}>
               {canViewDocentes && (
                 <button
@@ -932,397 +817,20 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            {loadingDetalles ? (
-              <div className={styles.empty}>
-                <p>Cargando datos...</p>
+            {canViewDocentes && token && (
+              <div style={{ display: activeDetallesSubTab === 'docentes' ? 'block' : 'none' }}>
+                <DocentesTab token={token} />
               </div>
-            ) : (
-              <>
-                {activeDetallesSubTab === 'docentes' && canViewDocentes && (
-                  docentes.length === 0 ? (
-                    <div className={styles.detailsEmpty}>
-                      <p>No hay docentes cargados en la base de datos.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.filterBar}>
-                        <div className={styles.filterRow}>
-                          <input
-                            type="text"
-                            placeholder="Buscar por legajo o nombre..."
-                            value={docentesFilters.search}
-                            onChange={e => handleDocentesFilterChange('search', e.target.value)}
-                            className={styles.filterInput}
-                          />
-                          <select
-                            value={docentesFilters.turno}
-                            onChange={e => handleDocentesFilterChange('turno', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todos">Todos los turnos</option>
-                            <option value="manana">Mañana</option>
-                            <option value="tarde">Tarde</option>
-                            <option value="noche">Noche</option>
-                          </select>
-                          <select
-                            value={docentesFilters.horarioFehaciente}
-                            onChange={e => handleDocentesFilterChange('horarioFehaciente', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todos">Horario fehaciente: todos</option>
-                            <option value="si">Horario fehaciente: sí</option>
-                            <option value="no">Horario fehaciente: no</option>
-                          </select>
-                          <button
-                            onClick={() => setDocentesFilters({ search: '', turno: 'todos', horarioFehaciente: 'todos', page: 1, pageSize: 25 })}
-                            className={styles.clearFiltersBtn}
-                          >
-                            Limpiar filtros
-                          </button>
-                        </div>
-                        <div className={styles.resultsCount}>
-                          {docentesPaginated.totalFiltered} {docentesPaginated.totalFiltered === 1 ? 'resultado' : 'resultados'}
-                        </div>
-                      </div>
+            )}
 
-                      {docentesPaginated.paginatedItems.length === 0 ? (
-                        <div className={styles.emptyFiltered}>
-                          <p>No se encontraron resultados con los filtros aplicados.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <table className={styles.detailsTable}>
-                            <thead>
-                              <tr>
-                                <th>Legajo</th>
-                                <th>Nombre</th>
-                                <th>Materias que Dicta</th>
-                                <th>Disponibilidad</th>
-                                <th>Max Comisiones</th>
-                                <th>Horario Fehaciente</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {docentesPaginated.paginatedItems.map(d => {
-                                const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
-                                const turnosDisplay = d.disponibilidad_turnos.length > 0
-                                  ? d.disponibilidad_turnos.map(t => turnoMap[t] || t).join(', ')
-                                  : '—';
-                                const materiasDisplay = d.materias_que_dicta.length > 0
-                                  ? d.materias_que_dicta.join(', ')
-                                  : '—';
-                                return (
-                                  <tr key={d.docente_id}>
-                                    <td>{d.docente_id}</td>
-                                    <td>{d.nombre}</td>
-                                    <td>{materiasDisplay}</td>
-                                    <td>{turnosDisplay}</td>
-                                    <td>{d.max_comisiones}</td>
-                                    <td>{d.horario_fehaciente ? '✓' : '✗'}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+            <div style={{ display: activeDetallesSubTab === 'alumnos' ? 'block' : 'none' }}>
+              <AlumnosTab students={students} />
+            </div>
 
-                          <div className={styles.pagination}>
-                            <div className={styles.pageSizeSelector}>
-                              <label>Mostrar:</label>
-                              <select
-                                value={docentesFilters.pageSize}
-                                onChange={e => handleDocentesFilterChange('pageSize', Number(e.target.value))}
-                              >
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                              </select>
-                            </div>
-                            <div className={styles.paginationControls}>
-                              <button
-                                onClick={() => handleDocentesFilterChange('page', docentesFilters.page - 1)}
-                                disabled={docentesPaginated.currentPage === 1}
-                                className={styles.paginationBtn}
-                              >
-                                ← Anterior
-                              </button>
-                              <span className={styles.pageInfo}>
-                                Página {docentesPaginated.currentPage} de {docentesPaginated.totalPages}
-                              </span>
-                              <button
-                                onClick={() => handleDocentesFilterChange('page', docentesFilters.page + 1)}
-                                disabled={docentesPaginated.currentPage >= docentesPaginated.totalPages}
-                                className={styles.paginationBtn}
-                              >
-                                Siguiente →
-                              </button>
-                            </div>
-                            <div className={styles.resultsInfo}>
-                              Mostrando {((docentesPaginated.currentPage - 1) * docentesFilters.pageSize) + 1}-{Math.min(docentesPaginated.currentPage * docentesFilters.pageSize, docentesPaginated.totalFiltered)} de {docentesPaginated.totalFiltered}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )
-                )}
-
-                {activeDetallesSubTab === 'alumnos' && (
-                  students.length === 0 ? (
-                    <div className={styles.detailsEmpty}>
-                      <p>No hay alumnos cargados para este plan.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.filterBar}>
-                        <div className={styles.filterRow}>
-                          <input
-                            type="text"
-                            placeholder="Buscar por legajo..."
-                            value={alumnosFilters.search}
-                            onChange={e => handleAlumnosFilterChange('search', e.target.value)}
-                            className={styles.filterInput}
-                          />
-                          <select
-                            value={alumnosFilters.turno}
-                            onChange={e => handleAlumnosFilterChange('turno', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todos">Todos los turnos</option>
-                            <option value="manana">Mañana</option>
-                            <option value="tarde">Tarde</option>
-                            <option value="noche">Noche</option>
-                          </select>
-                          <select
-                            value={alumnosFilters.anoIngreso}
-                            onChange={e => handleAlumnosFilterChange('anoIngreso', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todos">Todos los años</option>
-                            {anosIngreso.map(ano => (
-                              <option key={ano} value={String(ano)}>{ano}</option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => setAlumnosFilters({ search: '', turno: 'todos', anoIngreso: 'todos', page: 1, pageSize: 25 })}
-                            className={styles.clearFiltersBtn}
-                          >
-                            Limpiar filtros
-                          </button>
-                        </div>
-                        <div className={styles.resultsCount}>
-                          {alumnosPaginated.totalFiltered} {alumnosPaginated.totalFiltered === 1 ? 'resultado' : 'resultados'}
-                        </div>
-                      </div>
-
-                      {alumnosPaginated.paginatedItems.length === 0 ? (
-                        <div className={styles.emptyFiltered}>
-                          <p>No se encontraron resultados con los filtros aplicados.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <table className={styles.detailsTable}>
-                            <thead>
-                              <tr>
-                                <th>Legajo</th>
-                                <th>Plan</th>
-                                <th>Año Ingreso</th>
-                                <th>Turno Preferido</th>
-                                <th>Materias Aprobadas</th>
-                                <th>Promedio</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {alumnosPaginated.paginatedItems.map(s => {
-                                const aprobadas = s.registros_trayectoria?.filter(r => r.estado === 'aprobada') || [];
-                                const conCalif = aprobadas.filter(r => r.calificacion != null);
-                                const promedio = conCalif.length > 0
-                                  ? (conCalif.reduce((acc, r) => acc + (r.calificacion || 0), 0) / conCalif.length).toFixed(2)
-                                  : '—';
-                                const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
-                                const turnoDisplay = turnoMap[s.turno_preferido] || s.turno_preferido;
-                                return (
-                                  <tr key={s.estudiante_id}>
-                                    <td>{s.estudiante_id}</td>
-                                    <td>{s.plan_estudio_id}</td>
-                                    <td>{s.ano_ingreso}</td>
-                                    <td>{turnoDisplay}</td>
-                                    <td>{aprobadas.length}</td>
-                                    <td>{promedio}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-
-                          <div className={styles.pagination}>
-                            <div className={styles.pageSizeSelector}>
-                              <label>Mostrar:</label>
-                              <select
-                                value={alumnosFilters.pageSize}
-                                onChange={e => handleAlumnosFilterChange('pageSize', Number(e.target.value))}
-                              >
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                              </select>
-                            </div>
-                            <div className={styles.paginationControls}>
-                              <button
-                                onClick={() => handleAlumnosFilterChange('page', alumnosFilters.page - 1)}
-                                disabled={alumnosPaginated.currentPage === 1}
-                                className={styles.paginationBtn}
-                              >
-                                ← Anterior
-                              </button>
-                              <span className={styles.pageInfo}>
-                                Página {alumnosPaginated.currentPage} de {alumnosPaginated.totalPages}
-                              </span>
-                              <button
-                                onClick={() => handleAlumnosFilterChange('page', alumnosFilters.page + 1)}
-                                disabled={alumnosPaginated.currentPage >= alumnosPaginated.totalPages}
-                                className={styles.paginationBtn}
-                              >
-                                Siguiente →
-                              </button>
-                            </div>
-                            <div className={styles.resultsInfo}>
-                              Mostrando {((alumnosPaginated.currentPage - 1) * alumnosFilters.pageSize) + 1}-{Math.min(alumnosPaginated.currentPage * alumnosFilters.pageSize, alumnosPaginated.totalFiltered)} de {alumnosPaginated.totalFiltered}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )
-                )}
-
-                {activeDetallesSubTab === 'aulas' && (
-                  aulas.length === 0 ? (
-                    <div className={styles.detailsEmpty}>
-                      <p>No hay aulas cargadas en la base de datos.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.filterBar}>
-                        <div className={styles.filterRow}>
-                          <input
-                            type="text"
-                            placeholder="Buscar por aula ID o nombre..."
-                            value={aulasFilters.search}
-                            onChange={e => handleAulasFilterChange('search', e.target.value)}
-                            className={styles.filterInput}
-                          />
-                          <select
-                            value={aulasFilters.sede}
-                            onChange={e => handleAulasFilterChange('sede', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todas">Todas las sedes</option>
-                            {sedes.map(sede => (
-                              <option key={sede} value={sede}>{sede}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={aulasFilters.turno}
-                            onChange={e => handleAulasFilterChange('turno', e.target.value)}
-                            className={styles.filterSelect}
-                          >
-                            <option value="todos">Todos los turnos</option>
-                            <option value="manana">Mañana</option>
-                            <option value="tarde">Tarde</option>
-                            <option value="noche">Noche</option>
-                          </select>
-                          <button
-                            onClick={() => setAulasFilters({ search: '', sede: 'todas', turno: 'todos', page: 1, pageSize: 25 })}
-                            className={styles.clearFiltersBtn}
-                          >
-                            Limpiar filtros
-                          </button>
-                        </div>
-                        <div className={styles.resultsCount}>
-                          {aulasPaginated.totalFiltered} {aulasPaginated.totalFiltered === 1 ? 'resultado' : 'resultados'}
-                        </div>
-                      </div>
-
-                      {aulasPaginated.paginatedItems.length === 0 ? (
-                        <div className={styles.emptyFiltered}>
-                          <p>No se encontraron resultados con los filtros aplicados.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <table className={styles.detailsTable}>
-                            <thead>
-                              <tr>
-                                <th>Aula ID</th>
-                                <th>Nombre</th>
-                                <th>Capacidad</th>
-                                <th>Sede</th>
-                                <th>Turnos Disponibles</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {aulasPaginated.paginatedItems.map(a => {
-                                const turnoMap: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
-                                const turnosDisplay = a.turnos_disponibles.length > 0
-                                  ? a.turnos_disponibles.map(t => turnoMap[t] || t).join(', ')
-                                  : '—';
-                                return (
-                                  <tr key={a.aula_id}>
-                                    <td>{a.aula_id}</td>
-                                    <td>{a.nombre}</td>
-                                    <td>{a.capacidad}</td>
-                                    <td>{a.sede || '—'}</td>
-                                    <td>{turnosDisplay}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-
-                          <div className={styles.pagination}>
-                            <div className={styles.pageSizeSelector}>
-                              <label>Mostrar:</label>
-                              <select
-                                value={aulasFilters.pageSize}
-                                onChange={e => handleAulasFilterChange('pageSize', Number(e.target.value))}
-                              >
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                              </select>
-                            </div>
-                            <div className={styles.paginationControls}>
-                              <button
-                                onClick={() => handleAulasFilterChange('page', aulasFilters.page - 1)}
-                                disabled={aulasPaginated.currentPage === 1}
-                                className={styles.paginationBtn}
-                              >
-                                ← Anterior
-                              </button>
-                              <span className={styles.pageInfo}>
-                                Página {aulasPaginated.currentPage} de {aulasPaginated.totalPages}
-                              </span>
-                              <button
-                                onClick={() => handleAulasFilterChange('page', aulasFilters.page + 1)}
-                                disabled={aulasPaginated.currentPage >= aulasPaginated.totalPages}
-                                className={styles.paginationBtn}
-                              >
-                                Siguiente →
-                              </button>
-                            </div>
-                            <div className={styles.resultsInfo}>
-                              Mostrando {((aulasPaginated.currentPage - 1) * aulasFilters.pageSize) + 1}-{Math.min(aulasPaginated.currentPage * aulasFilters.pageSize, aulasPaginated.totalFiltered)} de {aulasPaginated.totalFiltered}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )
-                )}
-
-              </>
+            {token && (
+              <div style={{ display: activeDetallesSubTab === 'aulas' ? 'block' : 'none' }}>
+                <AulasTab token={token} />
+              </div>
             )}
           </>
         )}
