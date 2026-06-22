@@ -1,4 +1,11 @@
+import { getStoredToken } from './authService';
+
 const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export interface Plan {
   codigo_plan: string;
@@ -111,6 +118,27 @@ export interface Docente {
   disponibilidad_turnos: string[];
   max_comisiones: number;
   horario_fehaciente: boolean;
+}
+
+export interface PropuestaResumen {
+  id: number;
+  creada_en: string;
+  usuario: string;
+  codigo_plan: string;
+  carrera: string;
+  comisiones_a_abrir: number;
+  demanda_total: number;
+  materias_con_demanda: number;
+  config_usada: Record<string, any>;
+}
+
+export interface PropuestaDetalle {
+  id: number;
+  creada_en: string;
+  usuario: string;
+  codigo_plan: string;
+  publicada: boolean;
+  propuesta: any;
 }
 
 export const kairosService = {
@@ -244,7 +272,7 @@ export const kairosService = {
       `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/process`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ config: config ?? null }),
       }
     );
@@ -254,6 +282,27 @@ export const kairosService = {
       throw new Error(errorData.detail || 'Error procesando la demanda desde la DB');
     }
 
+    return response.json();
+  },
+
+  async listarPropuestas(codigoPlan?: string): Promise<PropuestaResumen[]> {
+    const url = codigoPlan
+      ? `${API_BASE_URL}/propuestas?codigo_plan=${encodeURIComponent(codigoPlan)}`
+      : `${API_BASE_URL}/propuestas`;
+    const response = await fetch(url, { headers: authHeaders() });
+    if (!response.ok) {
+      throw new Error('Error listando propuestas');
+    }
+    return response.json();
+  },
+
+  async getPropuesta(id: number): Promise<PropuestaDetalle> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/${id}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`Error cargando propuesta ${id}`);
+    }
     return response.json();
   },
 
@@ -303,6 +352,32 @@ export const kairosService = {
     }
     if (!response.ok) {
       throw new Error('Error cargando docentes');
+    }
+    return response.json();
+  },
+
+  async listarPropuestasPublicadas(): Promise<PropuestaResumen[]> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/publicadas`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Error listando propuestas publicadas');
+    }
+    return response.json();
+  },
+
+  async togglePublicacion(
+    id: number,
+    publicada: boolean
+  ): Promise<{ id: number; publicada: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/${id}/publicacion`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ publicada }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error actualizando publicación');
     }
     return response.json();
   },

@@ -3,6 +3,7 @@ Endpoints DB-driven (RF-010): exponen planes y estudiantes desde la DB
 y permiten correr el motor sin que el front mande JSON gigantes.
 """
 
+import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,13 +16,16 @@ from pydantic import ValidationError
 
 from kairos.api.deps import get_db
 from kairos.api.schemas.auth import UserOut
-from kairos.core.auth import get_current_user, require_role
 from kairos.api.schemas.optimizer import (
     EscenarioReporte,
+    PropuestaDetalle,
+    PropuestaResumen,
+    PublicacionRequest,
     RequestReporteComparativo,
     ResponsePrescripcion,
     ResponseReporteComparativo,
 )
+from kairos.core.auth import get_current_user, require_role
 from kairos.core.optimizer import KairosOptimizer
 from kairos.db.models import PlanORM
 from kairos.db.repository import (
@@ -30,6 +34,7 @@ from kairos.db.repository import (
     EstudianteRepository,
     HistoricoRepository,
     PlanRepository,
+    PropuestaRepository,
     RecursoRepository,
 )
 from kairos.schemas.data_models import (
@@ -280,11 +285,23 @@ def procesar_desde_db(
     codigo_plan: str,
     request: ProcessFromDbRequest,
     db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
 ) -> ResponsePrescripcion:
     """
     Levanta el plan y los estudiantes de la DB y corre el motor.
     Equivalente a POST /process pero sin que el front mande el JSON entero.
+    Persiste la propuesta + config en el historial atribuida al usuario
+    autenticado, y devuelve el id en la respuesta.
+
+    Solo roles operativos (director_departamento, decano) pueden prender el
+    motor. El docente funcional solo consume propuestas publicadas.
     """
+    if current_user.rol == "docente_funcional":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rol no puede generar propuestas. Mirá las publicadas en Explorar.",
+        )
+
     optimizer = _construir_optimizer(db, codigo_plan, request.config)
 
     prescripciones = optimizer.prescribir_aperturas()
@@ -294,7 +311,9 @@ def procesar_desde_db(
     metricas = optimizer.metricas_operativas(prescripciones)
 
     config_efectiva = request.config or ConfiguracionKairos()
-    return ResponsePrescripcion(
+    config_dict = _config_a_dict(config_efectiva)
+
+    propuesta = ResponsePrescripcion(
         carrera=optimizer.plan.nombre_carrera,
         prescripciones=prescripciones,
         cuellos_botella=cuellos,
@@ -302,14 +321,144 @@ def procesar_desde_db(
         materias_con_demanda=len(demanda),
         resumen=resumen,
         metricas_operativas=metricas,
-        config_usada={
-            "weight_tasa_graduacion": config_efectiva.weight_tasa_graduacion,
-            "weight_eficiencia_operativa": config_efectiva.weight_eficiencia_operativa,
-            "min_tasa_ocupacion": config_efectiva.min_tasa_ocupacion,
-            "max_cupos_por_comision": config_efectiva.max_cupos_por_comision,
-            "max_comisiones_a_abrir": config_efectiva.max_comisiones_a_abrir,
-        },
+        config_usada=config_dict,
     )
+
+    row = PropuestaRepository(db).save(
+        usuario=current_user.username,
+        codigo_plan=codigo_plan,
+        carrera=optimizer.plan.nombre_carrera,
+        config=config_dict,
+        propuesta=propuesta.model_dump(),
+    )
+    propuesta.propuesta_id = row.id
+    return propuesta
+
+
+@router.get("/propuestas", response_model=List[PropuestaResumen])
+def listar_propuestas(
+    codigo_plan: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+) -> List[PropuestaResumen]:
+    """
+    Lista el historial de propuestas generadas (mas reciente primero).
+    Filtra por codigo_plan si viene en la query. El payload completo no
+    se devuelve aca: para eso, GET /propuestas/{id}.
+    Solo devuelve las propuestas del usuario autenticado.
+    """
+    rows = PropuestaRepository(db).list_resumenes(
+        codigo_plan=codigo_plan, limit=limit, usuario=current_user.username
+    )
+    return [
+        PropuestaResumen(
+            id=r.id,
+            creada_en=r.creada_en,
+            usuario=r.usuario,
+            codigo_plan=r.codigo_plan,
+            carrera=r.carrera,
+            comisiones_a_abrir=r.comisiones_a_abrir,
+            demanda_total=r.demanda_total,
+            materias_con_demanda=r.materias_con_demanda,
+            config_usada=json.loads(r.config_json),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/propuestas/publicadas", response_model=List[PropuestaResumen])
+def listar_propuestas_publicadas(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _current_user: UserOut = Depends(get_current_user),
+) -> List[PropuestaResumen]:
+    """
+    Lista las propuestas publicadas (mas reciente primero).
+    Devuelve todas las publicadas, incluyendo las del usuario actual.
+    """
+    rows = PropuestaRepository(db).list_publicadas(limit=limit)
+    return [
+        PropuestaResumen(
+            id=r.id,
+            creada_en=r.creada_en,
+            usuario=r.usuario,
+            codigo_plan=r.codigo_plan,
+            carrera=r.carrera,
+            comisiones_a_abrir=r.comisiones_a_abrir,
+            demanda_total=r.demanda_total,
+            materias_con_demanda=r.materias_con_demanda,
+            config_usada=json.loads(r.config_json),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/propuestas/{propuesta_id}", response_model=PropuestaDetalle)
+def obtener_propuesta(
+    propuesta_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+) -> PropuestaDetalle:
+    """
+    Devuelve la propuesta completa para mostrarla como si recien hubieras corrido el motor.
+    Policy: 200 si es del current_user O está publicada; 403 en otro caso; 404 si no existe.
+    """
+    row = PropuestaRepository(db).get(propuesta_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Propuesta {propuesta_id} no existe")
+
+    if row.usuario != current_user.username and not row.publicada:
+        raise HTTPException(
+            status_code=403,
+            detail="No tenés permiso para ver esta propuesta (privada de otro usuario)",
+        )
+
+    payload = json.loads(row.propuesta_json)
+    # Re-inyecto el id por si el snapshot lo guardo como None (corridas viejas).
+    payload["propuesta_id"] = row.id
+    return PropuestaDetalle(
+        id=row.id,
+        creada_en=row.creada_en,
+        usuario=row.usuario,
+        codigo_plan=row.codigo_plan,
+        publicada=row.publicada,
+        propuesta=ResponsePrescripcion(**payload),
+    )
+
+
+@router.patch("/propuestas/{propuesta_id}/publicacion")
+def toggle_publicacion(
+    propuesta_id: int,
+    request: PublicacionRequest,
+    db: Session = Depends(get_db),
+    current_user: UserOut = Depends(get_current_user),
+) -> dict:
+    """
+    Cambia el estado de publicacion de una propuesta.
+    Solo el autor puede cambiar su estado de publicacion. El docente
+    funcional no puede publicar nada (su rol es de solo lectura sobre
+    propuestas publicadas).
+    """
+    if current_user.rol == "docente_funcional":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rol no puede publicar propuestas.",
+        )
+
+    repo = PropuestaRepository(db)
+    row = repo.get(propuesta_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Propuesta {propuesta_id} no existe")
+
+    if row.usuario != current_user.username:
+        raise HTTPException(
+            status_code=403,
+            detail="No tenés permiso para modificar esta propuesta (no sos el autor)",
+        )
+
+    updated = repo.set_publicada(propuesta_id, request.publicada)
+    return {"id": updated.id, "publicada": updated.publicada}
 
 
 def _config_a_dict(config: ConfiguracionKairos) -> dict:
