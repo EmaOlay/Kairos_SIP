@@ -44,6 +44,13 @@ const Dashboard: React.FC = () => {
     kairosService.getConfig().then(setConfig).catch(() => {});
   }, []);
 
+  // Docente funcional no genera propuestas; arranca y se queda en "Explorar".
+  useEffect(() => {
+    if (!canConfigure && activeTab === 'historial') {
+      setActiveTab('explorar');
+    }
+  }, [canConfigure, activeTab]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -572,13 +579,15 @@ const Dashboard: React.FC = () => {
           <span className={styles.studentsBadge}>
             {bootstrapping ? 'Cargando…' : `${students.length} estudiantes`}
           </span>
-          <button
-            className={styles.processBtn}
-            onClick={processData}
-            disabled={loading || bootstrapping || !plan}
-          >
-            {loading ? 'Procesando...' : 'Prender Motor'}
-          </button>
+          {canConfigure && (
+            <button
+              className={styles.processBtn}
+              onClick={processData}
+              disabled={loading || bootstrapping || !plan}
+            >
+              {loading ? 'Procesando...' : 'Prender Motor'}
+            </button>
+          )}
           {user?.rol === 'decano' && (
             <button
               type="button"
@@ -753,16 +762,18 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'historial'}
-            className={`${styles.tab} ${activeTab === 'historial' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('historial')}
-            disabled={!selectedPlanCode}
-            title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver historial de propuestas'}
-          >
-            Historial
-          </button>
+          {canConfigure && (
+            <button
+              role="tab"
+              aria-selected={activeTab === 'historial'}
+              className={`${styles.tab} ${activeTab === 'historial' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('historial')}
+              disabled={!selectedPlanCode}
+              title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver historial de propuestas'}
+            >
+              Historial
+            </button>
+          )}
           <button
             role="tab"
             aria-selected={activeTab === 'explorar'}
@@ -832,7 +843,7 @@ const Dashboard: React.FC = () => {
                 <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
                   📄 Exportar propuesta a PDF (Imprimir)
                 </button>
-                {historicoMeta && historicoMeta.usuario === user?.username && (
+                {canConfigure && historicoMeta && historicoMeta.usuario === user?.username && (
                   <button
                     className={styles.publicarBtn}
                     onClick={handleTogglePublicacion}
@@ -847,8 +858,14 @@ const Dashboard: React.FC = () => {
             </>
           ) : (
             <div className={styles.empty}>
-              <h2>Listo para optimizar.</h2>
-              <p>{bootstrapping ? 'Cargando datos desde la DB…' : 'Dale al botón de "Prender Motor".'}</p>
+              <h2>{canConfigure ? 'Listo para optimizar.' : 'No hay una propuesta abierta.'}</h2>
+              <p>
+                {bootstrapping
+                  ? 'Cargando datos desde la DB…'
+                  : canConfigure
+                    ? 'Dale al botón de "Prender Motor".'
+                    : 'Abrí una propuesta desde la pestaña "Explorar".'}
+              </p>
             </div>
           )
         )}

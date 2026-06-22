@@ -251,3 +251,43 @@ class TestVisibilidadPropuestas:
         r = client.get(f"/api/v1/propuestas/{propuesta_id}")
         assert r.status_code == 200
         assert r.json()["usuario"] == "alice"
+
+
+class TestPermisosPorRol:
+    """Tests del bloqueo por rol: docente_funcional es solo lectura."""
+
+    def test_docente_funcional_no_puede_prender_motor(self, client_with_plan):
+        """POST /planes/{codigo}/process con rol docente_funcional -> 403."""
+        client, codigo = client_with_plan
+        _current_user_holder["username"] = "carlos_docente"
+        _current_user_holder["rol"] = "docente_funcional"
+        try:
+            r = client.post(f"/api/v1/planes/{codigo}/process", json={"config": None})
+            assert r.status_code == 403
+            assert "no puede generar" in r.json()["detail"].lower()
+        finally:
+            _current_user_holder["rol"] = "decano"
+
+    def test_docente_funcional_no_puede_publicar(self, client_with_plan):
+        """PATCH /propuestas/{id}/publicacion con rol docente_funcional -> 403."""
+        client, codigo = client_with_plan
+
+        # Alice (decano) crea una propuesta
+        _current_user_holder["username"] = "alice"
+        _current_user_holder["rol"] = "decano"
+        post = client.post(f"/api/v1/planes/{codigo}/process", json={"config": None})
+        propuesta_id = post.json()["propuesta_id"]
+
+        # Carlos (docente) intenta publicarla (no es autor, pero el bloqueo
+        # por rol pega ANTES que el check de autor)
+        _current_user_holder["username"] = "carlos_docente"
+        _current_user_holder["rol"] = "docente_funcional"
+        try:
+            r = client.patch(
+                f"/api/v1/propuestas/{propuesta_id}/publicacion",
+                json={"publicada": True},
+            )
+            assert r.status_code == 403
+            assert "no puede publicar" in r.json()["detail"].lower()
+        finally:
+            _current_user_holder["rol"] = "decano"

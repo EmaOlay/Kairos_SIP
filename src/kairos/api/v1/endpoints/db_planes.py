@@ -264,7 +264,16 @@ def procesar_desde_db(
     Equivalente a POST /process pero sin que el front mande el JSON entero.
     Persiste la propuesta + config en el historial atribuida al usuario
     autenticado, y devuelve el id en la respuesta.
+
+    Solo roles operativos (director_departamento, decano) pueden prender el
+    motor. El docente funcional solo consume propuestas publicadas.
     """
+    if current_user.rol == "docente_funcional":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rol no puede generar propuestas. Mirá las publicadas en Explorar.",
+        )
+
     optimizer = _construir_optimizer(db, codigo_plan, request.config)
 
     prescripciones = optimizer.prescribir_aperturas()
@@ -399,8 +408,16 @@ def toggle_publicacion(
 ) -> dict:
     """
     Cambia el estado de publicacion de una propuesta.
-    Solo el autor puede cambiar su estado de publicacion.
+    Solo el autor puede cambiar su estado de publicacion. El docente
+    funcional no puede publicar nada (su rol es de solo lectura sobre
+    propuestas publicadas).
     """
+    if current_user.rol == "docente_funcional":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rol no puede publicar propuestas.",
+        )
+
     repo = PropuestaRepository(db)
     row = repo.get(propuesta_id)
     if row is None:
