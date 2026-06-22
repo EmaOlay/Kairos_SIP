@@ -1,0 +1,212 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.18s ease-out;
+}
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: min(900px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: slideUp 0.22s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  gap: var(--spacing-md);
+}
+
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+  margin: 0;
+}
+
+.modalSubtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.message {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.frente {
+  background: var(--border-color);
+  color: var(--text-secondary);
+  padding: var(--spacing-sm) var(--spacing-xl);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.aulaGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  align-items: center;
+}
+
+.aulaRow {
+  display: flex;
+  gap: var(--spacing-xl);
+}
+
+.aulaSide {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.seat {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.seat:hover {
+  transform: scale(1.05);
+}
+
+.seatOccupied {
+  background: rgba(63, 185, 80, 0.2);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.seatFree {
+  background: rgba(139, 148, 158, 0.08);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.overflowBadge {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--accent-red);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.legend {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-sm);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.legendBox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid;
+}
+
+.legendBoxOccupied {
+  background: rgba(63, 185, 80, 0.2);
+  border-color: var(--accent-green);
+}
+
+.legendBoxFree {
+  background: rgba(139, 148, 158, 0.08);
+  border-color: var(--border-color);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 640px) {
+  .seat {
+    width: 36px;
+    height: 36px;
+    font-size: 0.7rem;
+  }
+
+  .aulaSide {
+    gap: var(--spacing-xs);
+  }
+
+  .aulaRow {
+    gap: var(--spacing-md);
+  }
+
+  .aulaGrid {
+    gap: var(--spacing-sm);
+  }
+}
