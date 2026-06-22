@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
   const [graphData, setGraphData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial' | 'explorar'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string } | null>(null);
+  const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string; recienCreada?: boolean } | null>(null);
   const [publicada, setPublicada] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -282,9 +282,19 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     setHistoricoMeta(null);
+    setPublicada(false);
     try {
       const res = await kairosService.processFromDb(selectedPlanCode, config);
       setResults(res);
+
+      if (res.propuesta_id && user?.username) {
+        setHistoricoMeta({
+          id: res.propuesta_id,
+          creada_en: new Date().toISOString(),
+          usuario: user.username,
+          recienCreada: true,
+        });
+      }
 
       const graph = await kairosService.getGraph(plan);
       setGraphData(graph);
@@ -801,7 +811,7 @@ const Dashboard: React.FC = () => {
         {activeTab === 'resultados' && (
           results ? (
             <>
-              {historicoMeta && (
+              {historicoMeta && !historicoMeta.recienCreada && (
                 <div className={styles.info}>
                   {historicoMeta.usuario === user?.username ? (
                     <>
