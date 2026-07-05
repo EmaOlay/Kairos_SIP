@@ -4,6 +4,7 @@ import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/ka
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
+import StudentXray from '../StudentXray/StudentXray';
 import SettingsModal from '../Settings/SettingsModal';
 import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
@@ -22,7 +23,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'radiografia'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -703,6 +704,15 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'radiografia'}
+            className={`${styles.tab} ${activeTab === 'radiografia' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('radiografia')}
+            title="Radiografía de un alumno por legajo"
+          >
+            Radiografía del Alumno
+          </button>
         </div>
 
         {activeTab === 'resultados' && (
@@ -766,6 +776,8 @@ const Dashboard: React.FC = () => {
         {activeTab === 'reporteria' && selectedPlanCode && (
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
+
+        {activeTab === 'radiografia' && <StudentXray />}
 
       </main>
 

@@ -87,6 +87,29 @@ class EstudianteTrayectoria(BaseModel):
             return None
         return sum(r.calificacion for r in aprobadas) / len(aprobadas)
 
+    @property
+    def estado_por_materia(self) -> Dict[str, str]:
+        """
+        Mapea cada materia de la trayectoria a su estado "mas avanzado".
+
+        Si una materia tiene varios registros (recursada), gana el de mayor
+        prioridad: aprobada > regular > inscripta > pendiente. Sirve de base
+        para la radiografia del alumno (ver KairosOptimizer.radiografia_estudiante).
+        """
+        prioridad = {
+            EstadoMateria.APROBADA.value: 3,
+            EstadoMateria.REGULAR.value: 2,
+            EstadoMateria.INSCRIPTA.value: 1,
+            EstadoMateria.PENDIENTE.value: 0,
+        }
+        mejor: Dict[str, str] = {}
+        for r in self.registros_trayectoria:
+            estado = r.estado.value if isinstance(r.estado, EstadoMateria) else r.estado
+            actual = mejor.get(r.codigo_materia)
+            if actual is None or prioridad.get(estado, 0) > prioridad.get(actual, 0):
+                mejor[r.codigo_materia] = estado
+        return mejor
+
 
 class Materia(BaseModel):
     """Representa una asignatura en el plan de estudio"""

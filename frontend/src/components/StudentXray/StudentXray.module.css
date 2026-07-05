@@ -1,0 +1,277 @@
+.container {
+  margin-top: var(--spacing-lg);
+}
+
+.searchBar {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.searchLabel {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.input {
+  flex: 1;
+  min-width: 180px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+}
+
+.searchBtn {
+  background-color: var(--accent-cyan);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.searchBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.error {
+  background-color: rgba(248, 81, 73, 0.12);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  color: var(--accent-red);
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--spacing-xl);
+}
+
+/* --- Resumen --- */
+.summaryHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.studentId {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.carrera {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.progressWrap {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.progressTop {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.progressPct {
+  color: var(--accent-green);
+  font-weight: 800;
+}
+
+.progressBar {
+  height: 10px;
+  background-color: var(--bg-primary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--accent-green);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.counter {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--spacing-md);
+  text-align: center;
+}
+
+.counterValue {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.counterLabel {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin-top: var(--spacing-xs);
+}
+
+.cAprobadas { color: var(--accent-green); }
+.cPendientes { color: var(--accent-orange); }
+.cDisponibles { color: var(--accent-cyan); }
+.cBloqueadas { color: var(--accent-red); }
+
+/* --- Buckets --- */
+.buckets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.bucket {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--spacing-md);
+}
+
+.bucketTitle {
+  font-size: 1rem;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bucketCount {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.subjectList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.subject {
+  padding: var(--spacing-sm);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  border-left: 3px solid var(--border-color);
+}
+
+.subjectRecommended {
+  border-left-color: var(--accent-cyan);
+}
+
+.subjectHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.subjectCode {
+  font-family: var(--font-mono);
+  color: var(--accent-blue);
+  font-size: 0.85rem;
+}
+
+.subjectName {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.subjectMeta {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.tag {
+  display: inline-block;
+  margin-top: var(--spacing-xs);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.tagWarn {
+  background-color: rgba(240, 136, 62, 0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(240, 136, 62, 0.3);
+}
+
+.tagOk {
+  background-color: rgba(63, 185, 80, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.tagInfo {
+  background-color: rgba(0, 242, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+}
+
+.tagBlocked {
+  background-color: rgba(248, 81, 73, 0.12);
+  color: var(--accent-red);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.bucketEmpty {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}

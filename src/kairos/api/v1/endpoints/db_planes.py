@@ -18,6 +18,7 @@ from kairos.api.schemas.optimizer import (
     EscenarioReporte,
     RequestReporteComparativo,
     ResponsePrescripcion,
+    ResponseRadiografia,
     ResponseReporteComparativo,
 )
 from kairos.core.optimizer import KairosOptimizer
@@ -240,6 +241,35 @@ def listar_estudiantes(
     if db.get(PlanORM, codigo_plan) is None:
         raise HTTPException(status_code=404, detail=f"Plan {codigo_plan} no existe")
     return EstudianteRepository(db).list_by_plan(codigo_plan)
+
+
+@router.get(
+    "/estudiantes/{legajo}/radiografia",
+    response_model=ResponseRadiografia,
+)
+def radiografia_estudiante(
+    legajo: str, db: Session = Depends(get_db)
+) -> ResponseRadiografia:
+    """
+    Radiografia academica de un alumno a partir de su legajo: clasifica todo
+    el plan en aprobadas / pendientes de final / disponibles a cursar /
+    bloqueadas, y ordena lo disponible por lo que mas le conviene cursar.
+
+    Solo pide el legajo: el plan del alumno se resuelve internamente.
+    """
+    estudiante = EstudianteRepository(db).get(legajo)
+    if estudiante is None:
+        raise HTTPException(status_code=404, detail=f"Alumno {legajo} no existe")
+
+    plan = PlanRepository(db).get(estudiante.plan_estudio_id)
+    if plan is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plan {estudiante.plan_estudio_id} del alumno {legajo} no existe",
+        )
+
+    optimizer = KairosOptimizer(plan)
+    return ResponseRadiografia(**optimizer.radiografia_estudiante(estudiante))
 
 
 @router.post(
