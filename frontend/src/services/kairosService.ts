@@ -1,4 +1,11 @@
+import { getStoredToken } from './authService';
+
 const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export interface Plan {
   codigo_plan: string;
@@ -77,6 +84,63 @@ export interface ComparativeReport {
   escenarios: ScenarioReport[];
 }
 
+export interface RegistroTrayectoria {
+  codigo_materia: string;
+  nombre_materia: string;
+  estado: 'aprobada' | 'regular' | 'inscripta' | 'pendiente';
+  ano_academico: number;
+  cuatrimestre: number;
+  calificacion?: number | null;
+  fecha_aprobacion?: string | null;
+}
+
+export interface EstudianteTrayectoria {
+  estudiante_id: string;
+  codigo_carrera: string;
+  plan_estudio_id: string;
+  ano_ingreso: number;
+  turno_preferido: string;
+  registros_trayectoria: RegistroTrayectoria[];
+}
+
+export interface Aula {
+  aula_id: string;
+  nombre: string;
+  capacidad: number;
+  sede?: string | null;
+  turnos_disponibles: string[];
+}
+
+export interface Docente {
+  docente_id: string;
+  nombre: string;
+  materias_que_dicta: string[];
+  disponibilidad_turnos: string[];
+  max_comisiones: number;
+  horario_fehaciente: boolean;
+}
+
+export interface PropuestaResumen {
+  id: number;
+  creada_en: string;
+  usuario: string;
+  codigo_plan: string;
+  carrera: string;
+  comisiones_a_abrir: number;
+  demanda_total: number;
+  materias_con_demanda: number;
+  config_usada: Record<string, any>;
+}
+
+export interface PropuestaDetalle {
+  id: number;
+  creada_en: string;
+  usuario: string;
+  codigo_plan: string;
+  publicada: boolean;
+  propuesta: any;
+}
+
 export const kairosService = {
   async getConfig(): Promise<KairosConfig> {
     const response = await fetch(`${API_BASE_URL}/config`);
@@ -135,7 +199,7 @@ export const kairosService = {
     return response.json();
   },
 
-  async getEstudiantes(codigoPlan: string): Promise<Student[]> {
+  async getEstudiantes(codigoPlan: string): Promise<EstudianteTrayectoria[]> {
     const response = await fetch(
       `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/estudiantes`
     );
@@ -208,7 +272,7 @@ export const kairosService = {
       `${API_BASE_URL}/planes/${encodeURIComponent(codigoPlan)}/process`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ config: config ?? null }),
       }
     );
@@ -218,6 +282,27 @@ export const kairosService = {
       throw new Error(errorData.detail || 'Error procesando la demanda desde la DB');
     }
 
+    return response.json();
+  },
+
+  async listarPropuestas(codigoPlan?: string): Promise<PropuestaResumen[]> {
+    const url = codigoPlan
+      ? `${API_BASE_URL}/propuestas?codigo_plan=${encodeURIComponent(codigoPlan)}`
+      : `${API_BASE_URL}/propuestas`;
+    const response = await fetch(url, { headers: authHeaders() });
+    if (!response.ok) {
+      throw new Error('Error listando propuestas');
+    }
+    return response.json();
+  },
+
+  async getPropuesta(id: number): Promise<PropuestaDetalle> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/${id}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`Error cargando propuesta ${id}`);
+    }
     return response.json();
   },
 
@@ -239,6 +324,61 @@ export const kairosService = {
       throw new Error(errorData.detail || 'Error generando el reporte comparativo');
     }
 
+    return response.json();
+  },
+
+  async getAulas(token: string): Promise<Aula[]> {
+    const response = await fetch(`${API_BASE_URL}/aulas`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
+    if (!response.ok) {
+      throw new Error('Error cargando aulas');
+    }
+    return response.json();
+  },
+
+  async getDocentes(token: string): Promise<Docente[]> {
+    const response = await fetch(`${API_BASE_URL}/docentes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 401) {
+      throw new Error('Sesión expirada, volvé a iniciar sesión');
+    }
+    if (response.status === 403) {
+      throw new Error('No tenés permisos para ver esta sección');
+    }
+    if (!response.ok) {
+      throw new Error('Error cargando docentes');
+    }
+    return response.json();
+  },
+
+  async listarPropuestasPublicadas(): Promise<PropuestaResumen[]> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/publicadas`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Error listando propuestas publicadas');
+    }
+    return response.json();
+  },
+
+  async togglePublicacion(
+    id: number,
+    publicada: boolean
+  ): Promise<{ id: number; publicada: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/propuestas/${id}/publicacion`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ publicada }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Error actualizando publicación');
+    }
     return response.json();
   },
 };

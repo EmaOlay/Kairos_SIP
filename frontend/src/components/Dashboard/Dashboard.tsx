@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { kairosService } from '../../services/kairosService';
-import type { Plan, Student, KairosConfig, PlanSummary } from '../../services/kairosService';
+import type { Plan, KairosConfig, PlanSummary, EstudianteTrayectoria } from '../../services/kairosService';
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
+import HistorialPropuestas from '../Historial/HistorialPropuestas';
 import SettingsModal from '../Settings/SettingsModal';
 import ThemeToggle from './ThemeToggle';
 import kairosLogo from '../../assets/kairos-logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { rolLabel } from '../../services/authService';
+import DocentesTab from '../Detalles/DocentesTab';
+import AlumnosTab from '../Detalles/AlumnosTab';
+import AulasTab from '../Detalles/AulasTab';
+import { formatTurno } from '../../utils/turnos';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   // Solo los roles administrativos configuran y operan el motor.
   // El docente funcional ve la salida pero no toca palancas.
   const canConfigure = user?.rol === 'director_departamento' || user?.rol === 'decano';
+  // El listado de docentes (entidad ingestada) queda reservado a roles de gestión.
+  const canViewDocentes = user?.rol === 'director_departamento' || user?.rol === 'decano';
   const [planes, setPlanes] = useState<PlanSummary[]>([]);
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>('');
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<EstudianteTrayectoria[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial' | 'explorar'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string; recienCreada?: boolean } | null>(null);
+  const [publicada, setPublicada] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +45,18 @@ const Dashboard: React.FC = () => {
     max_cupos_por_comision: 50,
     max_comisiones_a_abrir: null,
   });
+  const [activeExplorarSubTab, setActiveExplorarSubTab] = useState<'propuestas' | 'docentes' | 'alumnos' | 'aulas'>('propuestas');
 
   useEffect(() => {
     kairosService.getConfig().then(setConfig).catch(() => {});
   }, []);
+
+  // Docente funcional no genera propuestas; arranca y se queda en "Explorar".
+  useEffect(() => {
+    if (!canConfigure && activeTab === 'historial') {
+      setActiveTab('explorar');
+    }
+  }, [canConfigure, activeTab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +107,12 @@ const Dashboard: React.FC = () => {
       cancelled = true;
     };
   }, [selectedPlanCode]);
+
+  useEffect(() => {
+    if (activeTab === 'explorar' && !canViewDocentes && activeExplorarSubTab === 'docentes') {
+      setActiveExplorarSubTab('propuestas');
+    }
+  }, [activeTab, activeExplorarSubTab, canViewDocentes]);
 
   const refreshPlanes = async (preferCodigo?: string): Promise<PlanSummary[]> => {
     const lista = await kairosService.listPlanes();
@@ -241,6 +264,7 @@ const Dashboard: React.FC = () => {
   const handleDocentesUpload = (e: React.ChangeEvent<HTMLInputElement>) =>
     handleListUpload(e, { tipo: 'docentes', idKey: 'docente_id', ingest: kairosService.ingestarDocentes });
 
+
   const handleWeightChange = (graduacion: number) => {
     setConfig(prev => ({
       ...prev,
@@ -257,14 +281,56 @@ const Dashboard: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setHistoricoMeta(null);
+    setPublicada(false);
     try {
       const res = await kairosService.processFromDb(selectedPlanCode, config);
       setResults(res);
+
+      if (res.propuesta_id && user?.username) {
+        setHistoricoMeta({
+          id: res.propuesta_id,
+          creada_en: new Date().toISOString(),
+          usuario: user.username,
+          recienCreada: true,
+        });
+      }
 
       const graph = await kairosService.getGraph(plan);
       setGraphData(graph);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const abrirPropuestaHistorica = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const detalle = await kairosService.getPropuesta(id);
+      setResults(detalle.propuesta);
+      setHistoricoMeta({
+        id: detalle.id,
+        creada_en: detalle.creada_en,
+        usuario: detalle.usuario,
+      });
+      setPublicada(detalle.publicada);
+      // Sincronizo el panel de config con la config con la que se generó.
+      const cfg = detalle.propuesta.config_usada;
+      if (cfg) {
+        setConfig({
+          weight_tasa_graduacion: cfg.weight_tasa_graduacion,
+          weight_eficiencia_operativa: cfg.weight_eficiencia_operativa,
+          min_tasa_ocupacion: cfg.min_tasa_ocupacion,
+          max_cupos_por_comision: cfg.max_cupos_por_comision,
+          max_comisiones_a_abrir: cfg.max_comisiones_a_abrir,
+        });
+      }
+      setActiveTab('resultados');
+    } catch (err: any) {
+      setError(err.message || 'Error abriendo la propuesta');
     } finally {
       setLoading(false);
     }
@@ -301,6 +367,21 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleTogglePublicacion = async () => {
+    if (!historicoMeta) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await kairosService.togglePublicacion(historicoMeta.id, !publicada);
+      setPublicada(resp.publicada);
+      setInfo(resp.publicada ? 'Propuesta publicada correctamente.' : 'Propuesta despublicada.');
+    } catch (err: any) {
+      setError(err.message || 'Error cambiando el estado de publicación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportPdf = () => {
     if (!results || !plan) return;
 
@@ -331,14 +412,13 @@ const Dashboard: React.FC = () => {
       const isRisk = item.bajo_cupo;
       const rowStyle = isRisk ? 'background-color: #fff8e1; color: #b78103;' : '';
       const badgeHtml = isRisk ? '<span class="warning-badge">⚠️ Riesgo de baja</span>' : 'Normal';
-      const turnoLabel: Record<string, string> = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
-      
+
       return `
         <tr style="${rowStyle}">
           <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
           <td><strong>${item.codigo}</strong></td>
           <td>${item.nombre}</td>
-          <td style="text-align: center;">${turnoLabel[item.turno] || item.turno}</td>
+          <td style="text-align: center;">${formatTurno(item.turno)}</td>
           <td style="text-align: center;">${item.aula || '-'}</td>
           <td>${item.docente || '-'}</td>
           <td style="text-align: right; font-weight: bold;">${item.demanda}</td>
@@ -522,13 +602,15 @@ const Dashboard: React.FC = () => {
           <span className={styles.studentsBadge}>
             {bootstrapping ? 'Cargando…' : `${students.length} estudiantes`}
           </span>
-          <button
-            className={styles.processBtn}
-            onClick={processData}
-            disabled={loading || bootstrapping || !plan}
-          >
-            {loading ? 'Procesando...' : 'Prender Motor'}
-          </button>
+          {canConfigure && (
+            <button
+              className={styles.processBtn}
+              onClick={processData}
+              disabled={loading || bootstrapping || !plan}
+            >
+              {loading ? 'Procesando...' : 'Prender Motor'}
+            </button>
+          )}
           {user?.rol === 'decano' && (
             <button
               type="button"
@@ -703,11 +785,50 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
+          {canConfigure && (
+            <button
+              role="tab"
+              aria-selected={activeTab === 'historial'}
+              className={`${styles.tab} ${activeTab === 'historial' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('historial')}
+              disabled={!selectedPlanCode}
+              title={!selectedPlanCode ? 'Seleccioná un plan primero' : 'Ver historial de propuestas'}
+            >
+              Historial
+            </button>
+          )}
+          <button
+            role="tab"
+            aria-selected={activeTab === 'explorar'}
+            className={`${styles.tab} ${activeTab === 'explorar' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('explorar')}
+            title="Explorar propuestas publicadas por otros usuarios"
+          >
+            Explorar
+          </button>
         </div>
 
         {activeTab === 'resultados' && (
           results ? (
             <>
+              {historicoMeta && !historicoMeta.recienCreada && (
+                <div className={styles.info}>
+                  {historicoMeta.usuario === user?.username ? (
+                    <>
+                      Estás viendo una propuesta histórica (#{historicoMeta.id}) generada por{' '}
+                      <strong>{historicoMeta.usuario}</strong> el{' '}
+                      {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}. La config
+                      del panel se sincronizó con la usada en esa corrida.
+                    </>
+                  ) : (
+                    <>
+                      Estás viendo una propuesta publicada por{' '}
+                      <strong>{historicoMeta.usuario}</strong> el{' '}
+                      {new Date(historicoMeta.creada_en).toLocaleString('es-AR')}.
+                    </>
+                  )}
+                </div>
+              )}
               <section className={styles.stats}>
                 <div className={styles.statCard} title="Suma total de inscripciones necesarias. Si un alumno necesita 3 materias en distintos turnos, suma 3.">
                   <span className={styles.statLabel}>Demanda Total</span>
@@ -745,14 +866,29 @@ const Dashboard: React.FC = () => {
                 <button className={styles.exportPdfBtn} onClick={handleExportPdf}>
                   📄 Exportar propuesta a PDF (Imprimir)
                 </button>
+                {canConfigure && historicoMeta && historicoMeta.usuario === user?.username && (
+                  <button
+                    className={styles.publicarBtn}
+                    onClick={handleTogglePublicacion}
+                    disabled={loading}
+                  >
+                    {publicada ? '🔓 Despublicar' : '🔒 Publicar'}
+                  </button>
+                )}
               </div>
 
               <PrescriptionTable prescriptions={results.prescripciones} weightCascada={config.weight_tasa_graduacion} weightRentabilidad={config.weight_eficiencia_operativa} />
             </>
           ) : (
             <div className={styles.empty}>
-              <h2>Listo para optimizar.</h2>
-              <p>{bootstrapping ? 'Cargando datos desde la DB…' : 'Dale al botón de "Prender Motor".'}</p>
+              <h2>{canConfigure ? 'Listo para optimizar.' : 'No hay una propuesta abierta.'}</h2>
+              <p>
+                {bootstrapping
+                  ? 'Cargando datos desde la DB…'
+                  : canConfigure
+                    ? 'Dale al botón de "Prender Motor".'
+                    : 'Abrí una propuesta desde la pestaña "Explorar".'}
+              </p>
             </div>
           )
         )}
@@ -767,6 +903,70 @@ const Dashboard: React.FC = () => {
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
 
+        {activeTab === 'historial' && selectedPlanCode && (
+          <HistorialPropuestas
+            codigoPlan={selectedPlanCode}
+            onAbrirPropuesta={abrirPropuestaHistorica}
+          />
+        )}
+
+        {activeTab === 'explorar' && (
+          <>
+            <div className={styles.subTabs}>
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'propuestas' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('propuestas')}
+              >
+                Propuestas
+              </button>
+              {canViewDocentes && (
+                <button
+                  className={`${styles.subTab} ${activeExplorarSubTab === 'docentes' ? styles.subTabActive : ''}`}
+                  onClick={() => setActiveExplorarSubTab('docentes')}
+                >
+                  Docentes
+                </button>
+              )}
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'alumnos' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('alumnos')}
+              >
+                Alumnos
+              </button>
+              <button
+                className={`${styles.subTab} ${activeExplorarSubTab === 'aulas' ? styles.subTabActive : ''}`}
+                onClick={() => setActiveExplorarSubTab('aulas')}
+              >
+                Aulas
+              </button>
+            </div>
+
+            <div style={{ display: activeExplorarSubTab === 'propuestas' ? 'block' : 'none' }}>
+              <HistorialPropuestas
+                onAbrirPropuesta={abrirPropuestaHistorica}
+                titulo="Propuestas publicadas"
+                hint="Explorá propuestas compartidas por otros usuarios y por vos."
+                fetcher={kairosService.listarPropuestasPublicadas}
+              />
+            </div>
+
+            {canViewDocentes && token && (
+              <div style={{ display: activeExplorarSubTab === 'docentes' ? 'block' : 'none' }}>
+                <DocentesTab token={token} />
+              </div>
+            )}
+
+            <div style={{ display: activeExplorarSubTab === 'alumnos' ? 'block' : 'none' }}>
+              <AlumnosTab students={students} />
+            </div>
+
+            {token && (
+              <div style={{ display: activeExplorarSubTab === 'aulas' ? 'block' : 'none' }}>
+                <AulasTab token={token} />
+              </div>
+            )}
+          </>
+        )}
       </main>
 
       {user?.rol === 'decano' && (
