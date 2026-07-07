@@ -84,6 +84,48 @@ export interface ComparativeReport {
   escenarios: ScenarioReport[];
 }
 
+export interface XraySubject {
+  codigo: string;
+  nombre: string;
+  ano: number;
+  cuatrimestre: number;
+}
+
+export interface XrayPendingFinal extends XraySubject {
+  puede_rendir_final: boolean;
+  correlativas_faltantes_final: string[];
+}
+
+export interface XrayAvailable extends XraySubject {
+  final_condicionado: boolean;
+  correlativas_a_aprobar_para_final: string[];
+  impacto_cascada: number;
+}
+
+export interface XrayBlocked extends XraySubject {
+  correlativas_faltantes: string[];
+}
+
+export interface XraySummary {
+  total_materias: number;
+  aprobadas: number;
+  pendientes_de_final: number;
+  disponibles_a_cursar: number;
+  bloqueadas: number;
+  porcentaje_avance: number;
+}
+
+export interface StudentXray {
+  estudiante_id: string;
+  plan: string;
+  carrera: string;
+  resumen: XraySummary;
+  aprobadas: XraySubject[];
+  pendientes_de_final: XrayPendingFinal[];
+  disponibles_a_cursar: XrayAvailable[];
+  bloqueadas: XrayBlocked[];
+}
+
 export interface RegistroTrayectoria {
   codigo_materia: string;
   nombre_materia: string;
@@ -280,6 +322,19 @@ export const kairosService = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || 'Error procesando la demanda desde la DB');
+    }
+
+    return response.json();
+  },
+
+  async getRadiografia(legajo: string): Promise<StudentXray> {
+    const response = await fetch(
+      `${API_BASE_URL}/estudiantes/${encodeURIComponent(legajo)}/radiografia`
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `No se pudo obtener la radiografía de ${legajo}`);
     }
 
     return response.json();

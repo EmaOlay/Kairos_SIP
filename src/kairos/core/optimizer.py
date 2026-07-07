@@ -17,6 +17,7 @@ import networkx as nx
 from kairos.schemas.data_models import (
     Aula,
     Docente,
+    EstadoMateria,
     EstudianteTrayectoria,
     HistoricoDictado,
     PlanEstudio,
@@ -729,6 +730,111 @@ class KairosOptimizer:
 
         cuellos.sort(key=lambda x: x["materias_dependientes"], reverse=True)
         return cuellos
+
+    def _ficha_materia(self, codigo: str) -> Dict:
+        """Datos basicos de una materia para las listas de la radiografia."""
+        materia = self.plan.materias[codigo]
+        return {
+            "codigo": codigo,
+            "nombre": materia.nombre,
+            "ano": materia.ano,
+            "cuatrimestre": materia.cuatrimestre,
+        }
+
+    def radiografia_estudiante(self, estudiante: EstudianteTrayectoria) -> Dict:
+        """
+        Radiografia academica de un alumno: clasifica CADA materia del plan
+        en cuatro grupos segun su trayectoria y las correlatividades.
+
+        Reglas de correlatividad (dos niveles):
+        - Para CURSAR una materia, cada correlativa anterior debe estar al
+          menos REGULAR (regularizada o aprobada).
+        - Para RENDIR el final, cada correlativa anterior debe estar APROBADA.
+
+        Grupos que devuelve:
+        - aprobadas: materias con final aprobado.
+        - pendientes_de_final: cursada REGULAR, final aun no rendido. Se marca
+          si ya puede rendir el final (todas sus correlativas aprobadas).
+        - disponibles_a_cursar: puede inscribirse este cuatrimestre. Si alguna
+          correlativa esta solo regular (no aprobada), queda con
+          `final_condicionado=True`: puede cursarla pero no rendir el final
+          hasta aprobar esa correlativa. Ordenadas por impacto de cascada
+          (cuanto mas desbloquea, mas conviene cursarla primero).
+        - bloqueadas: todavia no puede cursarla porque alguna correlativa no
+          llega a regular. Se listan las correlativas que le faltan.
+        """
+        estado = estudiante.estado_por_materia
+        aprobada = EstadoMateria.APROBADA.value
+        regular = EstadoMateria.REGULAR.value
+
+        aprobadas: List[Dict] = []
+        pendientes_de_final: List[Dict] = []
+        disponibles_a_cursar: List[Dict] = []
+        bloqueadas: List[Dict] = []
+
+        for codigo, materia in self.plan.materias.items():
+            estado_actual = estado.get(codigo)
+
+            if estado_actual == aprobada:
+                aprobadas.append(self._ficha_materia(codigo))
+                continue
+
+            prereqs = materia.correlativas_anteriores
+            # Correlativas que aun no estan aprobadas (bloquean el final).
+            faltan_para_final = [
+                p for p in prereqs if estado.get(p) != aprobada
+            ]
+            # Correlativas que no llegan a regular (bloquean la cursada).
+            faltan_para_cursar = [
+                p for p in prereqs if estado.get(p) not in (aprobada, regular)
+            ]
+
+            if estado_actual == regular:
+                ficha = self._ficha_materia(codigo)
+                ficha["puede_rendir_final"] = not faltan_para_final
+                ficha["correlativas_faltantes_final"] = sorted(faltan_para_final)
+                pendientes_de_final.append(ficha)
+                continue
+
+            # No aprobada y no regular: se decide por las correlativas.
+            if faltan_para_cursar:
+                ficha = self._ficha_materia(codigo)
+                ficha["correlativas_faltantes"] = sorted(faltan_para_cursar)
+                bloqueadas.append(ficha)
+            else:
+                ficha = self._ficha_materia(codigo)
+                ficha["final_condicionado"] = bool(faltan_para_final)
+                ficha["correlativas_a_aprobar_para_final"] = sorted(faltan_para_final)
+                ficha["impacto_cascada"] = self._calcular_impacto_cascada(codigo)
+                disponibles_a_cursar.append(ficha)
+
+        # Ordenamos: lo que mas conviene cursar primero (mas desbloqueo) arriba.
+        disponibles_a_cursar.sort(
+            key=lambda m: (-m["impacto_cascada"], m["ano"], m["cuatrimestre"], m["codigo"])
+        )
+        for grupo in (aprobadas, pendientes_de_final, bloqueadas):
+            grupo.sort(key=lambda m: (m["ano"], m["cuatrimestre"], m["codigo"]))
+
+        total = len(self.plan.materias)
+        n_aprobadas = len(aprobadas)
+
+        return {
+            "estudiante_id": estudiante.estudiante_id,
+            "plan": self.plan.codigo_plan,
+            "carrera": self.plan.nombre_carrera,
+            "resumen": {
+                "total_materias": total,
+                "aprobadas": n_aprobadas,
+                "pendientes_de_final": len(pendientes_de_final),
+                "disponibles_a_cursar": len(disponibles_a_cursar),
+                "bloqueadas": len(bloqueadas),
+                "porcentaje_avance": round(100 * n_aprobadas / total, 1) if total else 0.0,
+            },
+            "aprobadas": aprobadas,
+            "pendientes_de_final": pendientes_de_final,
+            "disponibles_a_cursar": disponibles_a_cursar,
+            "bloqueadas": bloqueadas,
+        }
 
     def reporte_prescriptivo(self) -> str:
         """Genera reporte completo de prescripciones"""

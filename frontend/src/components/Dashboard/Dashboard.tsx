@@ -4,6 +4,7 @@ import type { Plan, KairosConfig, PlanSummary, EstudianteTrayectoria } from '../
 import GraphViewer from '../Graph/GraphViewer';
 import PrescriptionTable from '../Prescriptions/PrescriptionTable';
 import ComparativeReportView from '../Reports/ComparativeReportView';
+import StudentXray from '../StudentXray/StudentXray';
 import HistorialPropuestas from '../Historial/HistorialPropuestas';
 import SettingsModal from '../Settings/SettingsModal';
 import ThemeToggle from './ThemeToggle';
@@ -29,7 +30,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<EstudianteTrayectoria[]>([]);
   const [results, setResults] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'historial' | 'explorar'>('resultados');
+  const [activeTab, setActiveTab] = useState<'resultados' | 'grafo' | 'reporteria' | 'radiografia' | 'historial' | 'explorar'>('resultados');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historicoMeta, setHistoricoMeta] = useState<{ id: number; creada_en: string; usuario: string; recienCreada?: boolean } | null>(null);
   const [publicada, setPublicada] = useState<boolean>(false);
@@ -785,6 +786,15 @@ const Dashboard: React.FC = () => {
           >
             Reportería Comparativa
           </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'radiografia'}
+            className={`${styles.tab} ${activeTab === 'radiografia' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('radiografia')}
+            title="Radiografía de un alumno por legajo"
+          >
+            Radiografía del Alumno
+          </button>
           {canConfigure && (
             <button
               role="tab"
@@ -902,6 +912,8 @@ const Dashboard: React.FC = () => {
         {activeTab === 'reporteria' && selectedPlanCode && (
           <ComparativeReportView codigoPlan={selectedPlanCode} baseConfig={config} />
         )}
+
+        {activeTab === 'radiografia' && <StudentXray />}
 
         {activeTab === 'historial' && selectedPlanCode && (
           <HistorialPropuestas
