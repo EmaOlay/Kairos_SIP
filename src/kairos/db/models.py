@@ -211,3 +211,36 @@ class HistoricoDictadoORM(Base):
     ano: Mapped[int] = mapped_column(Integer, nullable=False)
     cuatrimestre: Mapped[int] = mapped_column(Integer, nullable=False)
     cantidad_alumnos: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+class PropuestaGeneradaORM(Base):
+    """
+    Persistencia de cada corrida del motor: snapshot de la configuracion
+    usada + payload completo de la propuesta + metadatos para listar.
+
+    La config y la propuesta se guardan como JSON serializado en columnas
+    String (texto largo) para mantener portabilidad cross-engine. La
+    consulta del historial usa solo las columnas indexadas; el payload
+    completo solo se levanta en el detalle.
+    """
+
+    __tablename__ = "propuestas_generadas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    creada_en: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    usuario: Mapped[str] = mapped_column(String(128), nullable=False, default="anonimo")
+    codigo_plan: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    carrera: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Resumen para listar sin parsear el payload entero.
+    comisiones_a_abrir: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    demanda_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    materias_con_demanda: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Snapshot del input y del output (JSON-string para portabilidad).
+    config_json: Mapped[str] = mapped_column(String, nullable=False)
+    propuesta_json: Mapped[str] = mapped_column(String, nullable=False)
+
+    publicada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

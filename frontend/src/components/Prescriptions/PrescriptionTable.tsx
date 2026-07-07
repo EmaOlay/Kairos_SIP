@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import AulaModal from './AulaModal';
 import styles from './PrescriptionTable.module.css';
 
 interface Prescription {
@@ -12,6 +13,8 @@ interface Prescription {
   score: number;
   desbloquea: number;
   aula?: string;
+  aula_id?: string | null;
+  capacidad_aula?: number | null;
   docente?: string;
   bajo_cupo?: boolean;
 }
@@ -30,6 +33,18 @@ const turnoLabel: Record<string, string> = {
 
 const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, weightCascada, weightRentabilidad }) => {
   const items = Object.values(prescriptions).sort((a, b) => b.score - a.score);
+  const [aulaModalOpen, setAulaModalOpen] = useState(false);
+  const [selectedAula, setSelectedAula] = useState<{
+    aulaId: string;
+    aulaNombre: string;
+    capacidad: number;
+    demanda: number;
+  } | null>(null);
+
+  const closeAulaModal = useCallback(() => {
+    setAulaModalOpen(false);
+    setSelectedAula(null);
+  }, []);
 
   const buildScoreTooltip = (item: Prescription) => {
     const rentabilidad = (item.demanda * item.ingreso_por_alumno / 30000);
@@ -71,7 +86,27 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
                   <td className={styles.rank}>{idx + 1}</td>
                   <td className={styles.name}>{item.nombre}</td>
                   <td className={styles.turno}>{turnoLabel[item.turno] || item.turno}</td>
-                  <td className={styles.turno}>{item.aula || '-'}</td>
+                  <td className={styles.turno}>
+                    {item.aula && item.decision === 'ABRIR' && item.aula_id && item.capacidad_aula ? (
+                      <button
+                        className={styles.aulaLink}
+                        onClick={() => {
+                          setSelectedAula({
+                            aulaId: item.aula_id!,
+                            aulaNombre: item.aula!,
+                            capacidad: item.capacidad_aula!,
+                            demanda: item.demanda,
+                          });
+                          setAulaModalOpen(true);
+                        }}
+                        aria-label={`Ver diagrama del aula ${item.aula}`}
+                      >
+                        {item.aula}
+                      </button>
+                    ) : (
+                      item.aula || '-'
+                    )}
+                  </td>
                   <td className={styles.name}>{item.docente || '-'}</td>
                   <td className={styles.costo}>${item.ingreso_por_alumno?.toLocaleString()}</td>
                   <td className={styles.score} title={buildScoreTooltip(item)}>{item.score?.toFixed(1)}</td>
@@ -98,6 +133,16 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ prescriptions, we
           </tbody>
         </table>
       </div>
+      {selectedAula && (
+        <AulaModal
+          open={aulaModalOpen}
+          onClose={closeAulaModal}
+          aulaId={selectedAula.aulaId}
+          aulaNombre={selectedAula.aulaNombre}
+          capacidad={selectedAula.capacidad}
+          demanda={selectedAula.demanda}
+        />
+      )}
     </div>
   );
 };
